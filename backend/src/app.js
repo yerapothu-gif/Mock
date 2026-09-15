@@ -38,4 +38,15 @@ app.use("/api/sync", syncRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/support", supportRouter);
 
+// Centralized JSON Error Handler
+app.use((err, req, res, next) => {
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({
+        success: false,
+        statusCode,
+        message: err.message || "Internal Server Error",
+        errors: err.errors || [],
+    });
+});
+
 export { app }
