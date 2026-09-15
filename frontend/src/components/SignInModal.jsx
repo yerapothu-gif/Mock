@@ -1,21 +1,19 @@
 import { useState } from 'react';
 
 export default function SignInModal({ isOpen, onClose }) {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'farmer-register'
+  const [mode, setMode] = useState('signin'); // 'signin' | 'register'
   const [selectedRole, setSelectedRole] = useState('volunteer');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  
-  // Farmer Registration Fields
-  const [farmerName, setFarmerName] = useState('');
-  const [farmerPhone, setFarmerPhone] = useState('');
-  const [farmerVillage, setFarmerVillage] = useState('');
-  const [farmerLandSize, setFarmerLandSize] = useState('');
-  const [farmerCrops, setFarmerCrops] = useState('');
-  const [farmerMachineryNeed, setFarmerMachineryNeed] = useState('');
-  
+
+  // Account Registration Fields (Volunteer / VLE)
+  const [registerRole, setRegisterRole] = useState('volunteer');
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+
   const [submitted, setSubmitted] = useState(false);
-  const [registeredFarmer, setRegisteredFarmer] = useState(null);
+  const [registeredAccount, setRegisteredAccount] = useState(null);
 
   if (!isOpen) return null;
 
@@ -24,22 +22,19 @@ export default function SignInModal({ isOpen, onClose }) {
     setSubmitted(true);
   };
 
-  const handleFarmerRegister = (e) => {
+  const handleRegister = (e) => {
     e.preventDefault();
-    setRegisteredFarmer({
-      name: farmerName,
-      phone: farmerPhone,
-      village: farmerVillage,
-      landSize: farmerLandSize,
-      crops: farmerCrops,
-      need: farmerMachineryNeed,
+    setRegisteredAccount({
+      name: regName,
+      phone: regPhone,
+      role: registerRole,
     });
     setSubmitted(true);
   };
 
   const resetState = () => {
     setSubmitted(false);
-    setRegisteredFarmer(null);
+    setRegisteredAccount(null);
     setMode('signin');
   };
 
@@ -128,7 +123,7 @@ export default function SignInModal({ isOpen, onClose }) {
               margin: '0 0 6px',
             }}
           >
-            {mode === 'signin' ? 'Platform Access & Portal Sign In' : 'Farmer Registration'}
+            {mode === 'signin' ? 'Platform Access & Portal Sign In' : 'Staff & VLE Registration'}
           </h3>
           <p
             style={{
@@ -139,7 +134,7 @@ export default function SignInModal({ isOpen, onClose }) {
           >
             {mode === 'signin'
               ? 'Select your role to access offline survey tools or management consoles.'
-              : 'Register your farm to request subsidized equipment rentals and indigenous crop support.'}
+              : 'Create a Field Volunteer or Village Level Entrepreneur account to use the platform. Farmers are not app users — a volunteer records farmer details directly in the field.'}
           </p>
         </div>
 
@@ -176,11 +171,12 @@ export default function SignInModal({ isOpen, onClose }) {
               ) : (
                 <>
                   <h4 style={{ fontSize: '1.25rem', marginBottom: '8px', color: 'var(--brand-charcoal)' }}>
-                    Farmer Profile Registered Successfully!
+                    Account Created Successfully!
                   </h4>
                   <p style={{ fontSize: '0.9rem', color: 'var(--brand-charcoal-muted)', lineHeight: 1.6 }}>
-                    Welcome <strong>{registeredFarmer?.name}</strong> from village{' '}
-                    <strong>{registeredFarmer?.village}</strong>. Your {registeredFarmer?.landSize} acre farm record has been added to our offline registry. A local VLE or field volunteer will contact you regarding machinery availability.
+                    Welcome <strong>{registeredAccount?.name}</strong>. Your{' '}
+                    <strong>{registeredAccount?.role?.toUpperCase()}</strong> account has been registered. You can now
+                    sign in using your phone number and password.
                   </p>
                 </>
               )}
@@ -349,7 +345,7 @@ export default function SignInModal({ isOpen, onClose }) {
                 </button>
               </form>
 
-              {/* Requirement 2: If not registered, provide registration for farmer */}
+              {/* If not registered, offer staff/VLE account registration (not a farmer intake form) */}
               <div
                 style={{
                   marginTop: '22px',
@@ -359,11 +355,11 @@ export default function SignInModal({ isOpen, onClose }) {
                 }}
               >
                 <span style={{ fontSize: '0.92rem', color: 'var(--brand-charcoal-muted)' }}>
-                  Not registered on the platform?{' '}
+                  New volunteer or VLE?{' '}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setMode('farmer-register')}
+                  onClick={() => setMode('register')}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -375,12 +371,12 @@ export default function SignInModal({ isOpen, onClose }) {
                     fontFamily: 'var(--font-heading)',
                   }}
                 >
-                  Register as a Farmer →
+                  Create an account →
                 </button>
               </div>
             </>
           ) : (
-            /* ================= FARMER REGISTRATION FORM ================= */
+            /* ================= ACCOUNT REGISTRATION FORM (Volunteer / VLE) ================= */
             <div>
               <div
                 style={{
@@ -393,10 +389,54 @@ export default function SignInModal({ isOpen, onClose }) {
                   color: 'var(--brand-charcoal)',
                 }}
               >
-                🌾 <strong>Farmer Enrollment:</strong> Join over 10 Lakh farmers accessing subsidized machinery and indigenous crop programs across Madhya Pradesh.
+                🧭 <strong>Note:</strong> This creates a platform account for Field Volunteers and Village Level
+                Entrepreneurs. Farmers are recorded by a volunteer directly during a village visit and do not sign up
+                here.
               </div>
 
-              <form onSubmit={handleFarmerRegister} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  backgroundColor: 'var(--brand-bg)',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  marginBottom: '20px',
+                  border: '1px solid var(--brand-border)',
+                }}
+              >
+                {[
+                  { id: 'volunteer', label: 'Volunteer' },
+                  { id: 'vle', label: 'VLE' },
+                ].map((role) => {
+                  const isSelected = registerRole === role.id;
+                  return (
+                    <button
+                      key={role.id}
+                      type="button"
+                      onClick={() => setRegisterRole(role.id)}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        fontFamily: 'var(--font-heading)',
+                        backgroundColor: isSelected ? 'var(--brand-green)' : 'transparent',
+                        color: isSelected ? '#ffffff' : 'var(--brand-charcoal)',
+                        borderRadius: '2px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {role.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label
                     style={{
@@ -410,14 +450,14 @@ export default function SignInModal({ isOpen, onClose }) {
                       color: 'var(--brand-charcoal)',
                     }}
                   >
-                    Farmer Full Name *
+                    Full Name *
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Ramesh Kumar Patel"
-                    value={farmerName}
-                    onChange={(e) => setFarmerName(e.target.value)}
+                    placeholder="e.g. Anjali Sharma"
+                    value={regName}
+                    onChange={(e) => setRegName(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -430,141 +470,37 @@ export default function SignInModal({ isOpen, onClose }) {
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontFamily: 'var(--font-heading)',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        marginBottom: '4px',
-                        color: 'var(--brand-charcoal)',
-                      }}
-                    >
-                      Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+91 98765 43210"
-                      value={farmerPhone}
-                      onChange={(e) => setFarmerPhone(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid var(--brand-border)',
-                        borderRadius: '2px',
-                        fontSize: '0.92rem',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontFamily: 'var(--font-heading)',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        marginBottom: '4px',
-                        color: 'var(--brand-charcoal)',
-                      }}
-                    >
-                      Village / Hamlet *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Ratapani Khurd"
-                      value={farmerVillage}
-                      onChange={(e) => setFarmerVillage(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid var(--brand-border)',
-                        borderRadius: '2px',
-                        fontSize: '0.92rem',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontFamily: 'var(--font-heading)',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        marginBottom: '4px',
-                        color: 'var(--brand-charcoal)',
-                      }}
-                    >
-                      Land Size (Acres) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      required
-                      placeholder="e.g. 3.5"
-                      value={farmerLandSize}
-                      onChange={(e) => setFarmerLandSize(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid var(--brand-border)',
-                        borderRadius: '2px',
-                        fontSize: '0.92rem',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      style={{
-                        display: 'block',
-                        fontFamily: 'var(--font-heading)',
-                        fontSize: '0.78rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.05em',
-                        textTransform: 'uppercase',
-                        marginBottom: '4px',
-                        color: 'var(--brand-charcoal)',
-                      }}
-                    >
-                      Major Crops Grown *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Khapli Wheat, Millets"
-                      value={farmerCrops}
-                      onChange={(e) => setFarmerCrops(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid var(--brand-border)',
-                        borderRadius: '2px',
-                        fontSize: '0.92rem',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontFamily: 'var(--font-heading)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                      marginBottom: '4px',
+                      color: 'var(--brand-charcoal)',
+                    }}
+                  >
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="+91 98765 43210"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--brand-border)',
+                      borderRadius: '2px',
+                      fontSize: '0.92rem',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                    }}
+                  />
                 </div>
 
                 <div>
@@ -580,13 +516,15 @@ export default function SignInModal({ isOpen, onClose }) {
                       color: 'var(--brand-charcoal)',
                     }}
                   >
-                    Requested Machinery / Farming Needs (Optional)
+                    Password *
                   </label>
                   <input
-                    type="text"
-                    placeholder="e.g. Power Weeder, Seed Drill, Harvester"
-                    value={farmerMachineryNeed}
-                    onChange={(e) => setFarmerMachineryNeed(e.target.value)}
+                    type="password"
+                    required
+                    minLength={6}
+                    placeholder="At least 6 characters"
+                    value={regPassword}
+                    onChange={(e) => setRegPassword(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -609,7 +547,7 @@ export default function SignInModal({ isOpen, onClose }) {
                     backgroundColor: 'var(--brand-green)',
                   }}
                 >
-                  <span>REGISTER AS FARMER</span>
+                  <span>CREATE {registerRole.toUpperCase()} ACCOUNT</span>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M14 7.3466L13.4268 6.61513L8.7769 0.693149L7.20269 2.15609L10.3915 6.21861L0.235849 6.21861L0.235849 8.47461L10.3915 8.47461L7.20269 12.5371L8.7769 14L13.4268 8.07803L14 7.3466Z"
@@ -628,7 +566,7 @@ export default function SignInModal({ isOpen, onClose }) {
                 }}
               >
                 <span style={{ fontSize: '0.9rem', color: 'var(--brand-charcoal-muted)' }}>
-                  Already have a volunteer or staff account?{' '}
+                  Already have an account?{' '}
                 </span>
                 <button
                   type="button"
