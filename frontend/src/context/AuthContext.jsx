@@ -89,12 +89,6 @@ export function AuthProvider({ children }) {
     setLockedReason('');
   };
 
-  const toggleAccountLock = (locked) => {
-    vleService.setAccountLockStatus(locked);
-    setIsLocked(locked);
-    setLockedReason(locked ? 'Training incomplete. Account is locked.' : '');
-  };
-
   const refreshProfile = async () => {
     await loadVleProfile();
   };
@@ -114,8 +108,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
-        refreshProfile,
-        toggleAccountLock
+        refreshProfile
       }}
     >
       {children}

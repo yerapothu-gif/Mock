@@ -4,7 +4,6 @@
 // GET /api/vle/me/contact-requests
 
 import { request } from './apiClient';
-import { getStoreData, saveStoreData } from './mockDataStore';
 
 export const supportService = {
   /**
@@ -23,51 +22,19 @@ export const supportService = {
       urgency: payload.urgency || 'medium'
     };
 
-    try {
-      const res = await request('/api/vle/me/contact-admin', {
-        method: 'POST',
-        body: JSON.stringify(ticketData)
-      });
-      return res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404 || err.status === 501) {
-        const store = getStoreData();
-        const newTicket = {
-          _id: `tkt-${Date.now()}`,
-          vleId: store.profile._id,
-          ...ticketData,
-          status: 'open',
-          adminResponse: null,
-          createdAt: new Date().toISOString(),
-          resolvedAt: null
-        };
-        store.supportTickets.unshift(newTicket);
-        saveStoreData(store);
-        return {
-          success: true,
-          message: 'Support request submitted to Admin',
-          data: newTicket
-        };
-      }
-      throw err;
-    }
+    return await request('/api/vle/me/contact-admin', {
+      method: 'POST',
+      body: JSON.stringify(ticketData)
+    });
   },
 
   /**
    * Get VLE's own support tickets
    */
   async getTickets() {
-    try {
-      const res = await request('/api/vle/me/contact-requests', {
-        method: 'GET'
-      });
-      return res?.data || res;
-    } catch (err) {
-      if (err.status === 0 || err.status === 404 || err.status === 501) {
-        const store = getStoreData();
-        return store.supportTickets;
-      }
-      throw err;
-    }
+    const res = await request('/api/vle/me/contact-requests', {
+      method: 'GET'
+    });
+    return res?.data || res;
   }
 };

@@ -4,7 +4,6 @@
 // Handles offline queue, idempotency with offlineId, and batch upload
 
 import { request } from './apiClient';
-import { getStoreData, saveStoreData } from './mockDataStore';
 
 const OFFLINE_TXN_KEY = 'reachroots_offline_tx_queue_v1';
 
@@ -46,15 +45,6 @@ export const syncService = {
     queue.push(offlineTxn);
     localStorage.setItem(OFFLINE_TXN_KEY, JSON.stringify(queue));
 
-    // Also add to local transaction store so user sees it in their history immediately with 'pending' sync badge
-    const store = getStoreData();
-    store.transactions.unshift({
-      _id: `temp-${Date.now()}`,
-      vleId: store.profile._id,
-      ...offlineTxn
-    });
-    saveStoreData(store);
-
     return offlineTxn;
   },
 
@@ -82,50 +72,19 @@ export const syncService = {
       }))
     };
 
-    try {
-      const res = await request('/api/sync/batch', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
+    const res = await request('/api/sync/batch', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
 
-      // Clear queue upon confirmed sync
-      localStorage.removeItem(OFFLINE_TXN_KEY);
+    // Clear queue upon confirmed sync
+    localStorage.removeItem(OFFLINE_TXN_KEY);
 
-      // Update syncStatus in local store
-      const store = getStoreData();
-      store.transactions.forEach((txn) => {
-        if (txn.syncStatus === 'pending') {
-          txn.syncStatus = 'synced';
-        }
-      });
-      saveStoreData(store);
-
-      return {
-        success: true,
-        syncedCount: queue.length,
-        data: res?.data || res
-      };
-    } catch (err) {
-      if (err.status === 0 || err.status === 404 || err.status === 501) {
-        // Fallback sync simulation for testing
-        localStorage.removeItem(OFFLINE_TXN_KEY);
-        const store = getStoreData();
-        store.transactions.forEach((txn) => {
-          if (txn.syncStatus === 'pending') {
-            txn.syncStatus = 'synced';
-          }
-        });
-        saveStoreData(store);
-
-        return {
-          success: true,
-          syncedCount: queue.length,
-          simulated: true,
-          message: `Successfully synchronized ${queue.length} offline transactions.`
-        };
-      }
-      throw err;
-    }
+    return {
+      success: true,
+      syncedCount: queue.length,
+      data: res?.data || res
+    };
   },
 
   clearQueue() {

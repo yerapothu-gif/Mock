@@ -54,6 +54,7 @@ export default function SignInModal({ isOpen, onClose, onEnterAdmin, initialRole
         phone: regPhone,
         role: registerRole,
       });
+      setSelectedRole(registerRole);
       setSubmitted(true);
     } catch (err) {
       setFormError(err?.message || 'Registration failed. Please try again.');
@@ -392,7 +393,7 @@ export default function SignInModal({ isOpen, onClose, onEnterAdmin, initialRole
                 }}
               >
                 <span style={{ fontSize: '0.92rem', color: 'var(--brand-charcoal-muted)' }}>
-                  New volunteer or VLE?{' '}
+                  New volunteer, VLE, or admin staff?{' '}
                 </span>
                 <button
                   type="button"
@@ -426,9 +427,9 @@ export default function SignInModal({ isOpen, onClose, onEnterAdmin, initialRole
                   color: 'var(--brand-charcoal)',
                 }}
               >
-                🧭 <strong>Note:</strong> This creates a platform account for Field Volunteers and Village Level
-                Entrepreneurs. Farmers are recorded by a volunteer directly during a village visit and do not sign up
-                here.
+                🧭 <strong>Note:</strong> This creates a platform account for Field Volunteers, Village Level
+                Entrepreneurs, and NGO Admin Staff. Farmers are recorded by a volunteer directly during a village
+                visit and do not sign up here.
               </div>
 
               <div
@@ -444,6 +445,7 @@ export default function SignInModal({ isOpen, onClose, onEnterAdmin, initialRole
                 {[
                   { id: 'volunteer', label: 'Volunteer' },
                   { id: 'vle', label: 'VLE' },
+                  { id: 'admin', label: 'Admin Staff' },
                 ].map((role) => {
                   const isSelected = registerRole === role.id;
                   return (

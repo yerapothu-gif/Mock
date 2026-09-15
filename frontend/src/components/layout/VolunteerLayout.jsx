@@ -1,5 +1,6 @@
 import { useVolunteerAuth } from '../../context/VolunteerAuthContext';
 import { useVolunteerOffline } from '../../context/VolunteerOfflineContext';
+import { useAuth } from '../../context/AuthContext';
 import { OfflineBanner } from './OfflineBanner';
 import {
   LayoutDashboard,
@@ -11,7 +12,8 @@ import {
   UserCheck,
   Sprout,
   Wifi,
-  WifiOff
+  WifiOff,
+  LogOut
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -27,6 +29,11 @@ const NAV_ITEMS = [
 export function VolunteerLayout({ activeTab, onNavigate, children }) {
   const { volunteer } = useVolunteerAuth();
   const { isOnline, pendingCount, toggleSimulatedOffline, simulatedOffline } = useVolunteerOffline();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
 
   const getInitials = (name) => {
     if (!name) return 'VR';
@@ -85,6 +92,10 @@ export function VolunteerLayout({ activeTab, onNavigate, children }) {
               </span>
             </div>
           </div>
+          <button className="nav-item" onClick={handleLogout} id="logout-btn" style={{ color: '#fca5a5' }}>
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 

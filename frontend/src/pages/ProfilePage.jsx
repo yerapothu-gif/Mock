@@ -48,7 +48,7 @@ function InfoRow({ icon: Icon, label, value }) {
 }
 
 export default function ProfilePage() {
-  const { vleProfile, isLocked, lockedReason, refreshProfile, toggleAccountLock } = useAuth();
+  const { vleProfile, isLocked, lockedReason, refreshProfile } = useAuth();
   const [profile, setProfile] = useState(vleProfile);
   const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(!vleProfile);
@@ -86,12 +86,6 @@ export default function ProfilePage() {
     return (
       <div className="page-container">
         <AccountLockedBanner reason={lockedReason} onRefresh={handleRefreshLock} />
-        {/* Testing utility */}
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => toggleAccountLock(false)} id="profile-unlock-test-btn">
-            🔓 Simulate Account Unlock (Test)
-          </button>
-        </div>
       </div>
     );
   }
@@ -175,18 +169,6 @@ export default function ProfilePage() {
                   <StatusBadge status={eq.condition} />
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Testing: Simulate lock */}
-          <div className="card" style={{ background: '#fffbeb', border: '1px solid var(--warning-border)' }}>
-            <div className="card-header" style={{ borderBottomColor: 'var(--warning-border)' }}>
-              <h3 className="card-title" style={{ color: 'var(--warning-text)', fontSize: '0.9rem' }}>🔬 Testing Tools</h3>
-            </div>
-            <div className="card-body" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="btn btn-danger-outline btn-sm" onClick={() => toggleAccountLock(true)} id="profile-lock-test-btn">
-                🔒 Simulate 403 Locked Account
-              </button>
             </div>
           </div>
         </div>

@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
+import { LogOut } from 'lucide-react';
 import adminDataService from '../../services/adminDataService';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AdminDashboard({ onExitToLanding }) {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    onExitToLanding?.();
+  };
+
   // Navigation: All 8 core requested modules in structured vertical navbar
   const [activeTab, setActiveTab] = useState('queue'); // 'queue' | 'synced-data' | 'vle' | 'machinery' | 'rentals' | 'ai-reports' | 'farmer-requests' | 'support'
   const [loading, setLoading] = useState(true);
@@ -80,24 +89,32 @@ export default function AdminDashboard({ onExitToLanding }) {
   }, []);
 
   // Action 1: Confirm Viable Village
-  const handleConfirmViable = (villageId, villageName) => {
-    const updated = adminDataService.confirmViableVillage(villageId);
-    setVillages(updated);
-    showNotification(`Village "${villageName}" confirmed viable. Readiness upgraded to Assessed.`);
-    if (selectedVillageDetails?._id === villageId) {
-      setSelectedVillageDetails(updated.find((v) => v._id === villageId));
+  const handleConfirmViable = async (villageId, villageName) => {
+    try {
+      const updated = await adminDataService.confirmViableVillage(villageId);
+      setVillages(updated);
+      showNotification(`Village "${villageName}" confirmed viable. Readiness upgraded to Assessed.`);
+      if (selectedVillageDetails?._id === villageId) {
+        setSelectedVillageDetails(updated.find((v) => v._id === villageId));
+      }
+    } catch (err) {
+      showNotification(err?.message || 'Failed to confirm village as viable.', 'error');
     }
   };
 
   // Action 2: Onboard VLE Candidate
-  const handleOnboardSubmit = (e) => {
+  const handleOnboardSubmit = async (e) => {
     e.preventDefault();
     if (!newVleData.name || !newVleData.villageName) return;
-    const updated = adminDataService.onboardVLE(newVleData);
-    setVles(updated);
-    setOnboardModalOpen(false);
-    setNewVleData({ name: '', contactInfo: '', villageId: '', villageName: '' });
-    showNotification(`Candidate "${newVleData.name}" successfully onboarded as VLE for ${newVleData.villageName}.`);
+    try {
+      const updated = await adminDataService.onboardVLE(newVleData);
+      setVles(updated);
+      setOnboardModalOpen(false);
+      setNewVleData({ name: '', contactInfo: '', villageId: '', villageName: '' });
+      showNotification(`Candidate "${newVleData.name}" successfully onboarded as VLE for ${newVleData.villageName}.`);
+    } catch (err) {
+      showNotification(err?.message || 'Failed to onboard VLE candidate.', 'error');
+    }
   };
 
   // Quick Promote Candidate from Synced Farmers
@@ -113,47 +130,63 @@ export default function AdminDashboard({ onExitToLanding }) {
   };
 
   // Action 3: Assign Machinery (Strictly Foundation Ownership)
-  const handleAssignEquipment = (e) => {
+  const handleAssignEquipment = async (e) => {
     e.preventDefault();
     if (!selectedVleForAssign) return;
     const mId = assignMachineId || `RRF-EQ-${Math.floor(1000 + Math.random() * 9000)}`;
-    const updated = adminDataService.assignEquipment(selectedVleForAssign._id, {
-      machineType: assignMachineType,
-      machineId: mId,
-    });
-    setVles(updated);
-    setAssignModalOpen(false);
-    setSelectedVleForAssign(null);
-    setAssignMachineId('');
-    showNotification(`Assigned ${assignMachineType} (${mId}) to VLE. Ownership tagged strictly as "Foundation".`);
+    try {
+      const updated = await adminDataService.assignEquipment(selectedVleForAssign._id, {
+        machineType: assignMachineType,
+        machineId: mId,
+      });
+      setVles(updated);
+      setAssignModalOpen(false);
+      setSelectedVleForAssign(null);
+      setAssignMachineId('');
+      showNotification(`Assigned ${assignMachineType} (${mId}) to VLE. Ownership tagged strictly as "Foundation".`);
+    } catch (err) {
+      showNotification(err?.message || 'Failed to assign equipment.', 'error');
+    }
   };
 
   // Action 4: Mark Training Complete (Unlocks VLE Account Access)
-  const handleMarkTrainingComplete = (vleId, vleName) => {
-    const updated = adminDataService.markTrainingComplete(vleId);
-    setVles(updated);
-    showNotification(`VLE Training verified for ${vleName}. Account status unlocked to ACTIVE.`);
+  const handleMarkTrainingComplete = async (vleId, vleName) => {
+    try {
+      const updated = await adminDataService.markTrainingComplete(vleId);
+      setVles(updated);
+      showNotification(`VLE Training verified for ${vleName}. Account status unlocked to ACTIVE.`);
+    } catch (err) {
+      showNotification(err?.message || 'Failed to mark training complete.', 'error');
+    }
   };
 
   // Action 5: Fulfill Open Farmer Request
-  const handleFulfillRequest = (reqId, farmerName, machineType) => {
-    const updatedVillages = adminDataService.fulfillFarmerRequest(reqId);
-    setVillages(updatedVillages);
-    const updatedReqs = adminDataService.getFarmerRequests();
-    setFarmerRequests(updatedReqs);
-    showNotification(`Fulfilled request for ${farmerName} (${machineType}). Subsidized machine allocated.`);
+  const handleFulfillRequest = async (reqId, farmerName, machineType) => {
+    try {
+      const updatedVillages = await adminDataService.fulfillFarmerRequest(reqId);
+      setVillages(updatedVillages);
+      const updatedReqs = await adminDataService.getFarmerRequests();
+      setFarmerRequests(updatedReqs);
+      showNotification(`Fulfilled request for ${farmerName} (${machineType}). Subsidized machine allocated.`);
+    } catch (err) {
+      showNotification(err?.message || 'Failed to fulfill farmer request.', 'error');
+    }
   };
 
   // Action 6: Respond to VLE Support / Contact Ticket
-  const handleRespondSupport = (e) => {
+  const handleRespondSupport = async (e) => {
     e.preventDefault();
     if (!selectedSupportTicket || !supportReplyText) return;
-    const updated = adminDataService.respondToSupportRequest(selectedSupportTicket._id, supportReplyText);
-    setSupportRequests(updated);
-    setSupportReplyModalOpen(false);
-    setSelectedSupportTicket(null);
-    setSupportReplyText('');
-    showNotification('Response dispatched to VLE and ticket marked as Resolved.');
+    try {
+      const updated = await adminDataService.respondToSupportRequest(selectedSupportTicket._id, supportReplyText);
+      setSupportRequests(updated);
+      setSupportReplyModalOpen(false);
+      setSelectedSupportTicket(null);
+      setSupportReplyText('');
+      showNotification('Response dispatched to VLE and ticket marked as Resolved.');
+    } catch (err) {
+      showNotification(err?.message || 'Failed to send response.', 'error');
+    }
   };
 
   // Aggregate Metrics
@@ -417,7 +450,7 @@ export default function AdminDashboard({ onExitToLanding }) {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>Sahasra Patel</span>
+                <span>{user?.name || 'Admin'}</span>
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} title="Online / Rollback Safe-Mode Active" />
               </div>
               <div style={{ fontSize: '0.7rem', color: 'rgba(255, 255, 255, 0.5)' }}>
@@ -426,36 +459,68 @@ export default function AdminDashboard({ onExitToLanding }) {
             </div>
           </div>
 
-          {/* Exit Link */}
-          <button
-            onClick={onExitToLanding}
-            style={{
-              background: 'transparent',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '3px',
-              padding: '8px',
-              color: 'rgba(255, 255, 255, 0.8)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              fontFamily: 'var(--font-heading)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
-            }}
-          >
-            <span>← Exit to Site</span>
-          </button>
+          {/* Exit / Sign Out Links */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={onExitToLanding}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '3px',
+                padding: '8px',
+                color: 'rgba(255, 255, 255, 0.8)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                fontFamily: 'var(--font-heading)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
+                e.currentTarget.style.color = '#ffffff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.8)';
+              }}
+            >
+              <span>← Exit to Site</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              id="logout-btn"
+              title="Sign out and switch accounts"
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(252, 165, 165, 0.3)',
+                borderRadius: '3px',
+                padding: '8px',
+                color: '#fca5a5',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                fontFamily: 'var(--font-heading)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(252, 165, 165, 0.6)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(252, 165, 165, 0.3)';
+              }}
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
         </div>
       </aside>
 

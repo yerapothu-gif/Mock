@@ -1,481 +1,328 @@
 /**
  * Admin Data Service
- * Attempts to communicate with Express backend API endpoints.
- * Automatically falls back to high-fidelity rollback data with localStorage persistence
- * whenever MongoDB or the backend server is unreachable.
+ * Talks exclusively to the real Express/MongoDB backend via the shared
+ * authenticated apiClient `request()` helper (adds the Bearer token,
+ * normalizes errors as ApiError). No localStorage, no hardcoded fallback
+ * data - every read/write goes to a real backend endpoint.
  */
 
-const STORAGE_KEY_VILLAGES = 'reaching_roots_admin_villages';
-const STORAGE_KEY_VLES = 'reaching_roots_admin_vles';
-const STORAGE_KEY_REQUESTS = 'reaching_roots_admin_requests';
-const STORAGE_KEY_RENTALS = 'reaching_roots_admin_rentals';
-const STORAGE_KEY_SUPPORT = 'reaching_roots_admin_support';
-const STORAGE_KEY_REPORTS = 'reaching_roots_admin_reports';
+import { request } from '../api/apiClient';
 
-// Initial high-fidelity Rollback Dataset (Ratapani / Bhopal rural sanctuary belt)
-const DEFAULT_VILLAGES = [
-  {
-    _id: 'vlg_001',
-    name: 'Ratapani Khurd',
-    location: { type: 'Point', coordinates: [77.498, 22.981] },
-    farmerCount: 142,
-    majorCrops: ['Khapli Wheat', 'Kodo Millet', 'Gram'],
-    waterResources: 'Perennial Stream & 2 Borewells',
-    acres: 380,
-    readinessStage: 'identified', // 'identified' | 'assessed' | 'vle-active'
-    viableStatus: 'pending', // 'pending' | 'confirmed'
-    status: 'synced',
-    communityStructures: [{ type: 'SHG', name: 'Narmada Mahila Samiti' }],
-    syncedAt: '2026-09-14T10:30:00Z',
-    volunteerName: 'Vikas Sharma',
-    farmers: [
-      { _id: 'f_101', name: 'Ramesh Patel', contactInfo: '+91 98261 11223', landSize: 4.5, crops: ['Khapli Wheat', 'Soybean'], potentialVle: true, notes: 'Has tractor driving license & SHG leadership experience' },
-      { _id: 'f_102', name: 'Sunita Bai', contactInfo: '+91 97552 33445', landSize: 2.0, crops: ['Kodo Millet'], potentialVle: false, notes: 'Smallholder, actively attends bioresource meetings' },
-      { _id: 'f_103', name: 'Ghanshyam Yadav', contactInfo: '+91 94250 55667', landSize: 6.0, crops: ['Wheat', 'Gram'], potentialVle: true, notes: 'Community opinion leader with spare barn for equipment storage' }
-    ],
-    needsAssessment: {
-      conductedBy: 'Vikas Sharma',
-      processesEvaluated: [
-        { stage: 'Land Prep', notes: 'Severe tractor shortage during pre-monsoon window' },
-        { stage: 'Sowing', notes: 'Traditional broadcasting causes 30% seed wastage; seed drill urgently needed' },
-        { stage: 'Weeding', notes: 'Manual weeding labor shortage during peak flush' },
-        { stage: 'Harvesting', notes: 'Post-harvest thresher hired from distant town at exorbitant rates' }
-      ],
-      gapsIdentified: ['Seed Drill Deficit', 'Power Weeder Shortage', 'Lack of Grain Cleaner'],
-      farmerRequests: [
-        { _id: 'req_1', farmerName: 'Ramesh Patel', requestType: 'Seed Drill', urgency: 'High', notes: 'Needed within 7 days for wheat sowing', status: 'open' },
-        { _id: 'req_2', farmerName: 'Sunita Bai', requestType: 'Power Weeder', urgency: 'Medium', notes: 'Manual labor unavailable for weeding', status: 'open' }
-      ]
-    }
-  },
-  {
-    _id: 'vlg_002',
-    name: 'Bairagarh Kalan',
-    location: { type: 'Point', coordinates: [77.342, 23.015] },
-    farmerCount: 188,
-    majorCrops: ['Soybean', 'Kutki Millet', 'Mustard'],
-    waterResources: 'Seasonal Nallah & Check Dam',
-    acres: 510,
-    readinessStage: 'assessed',
-    viableStatus: 'confirmed',
-    status: 'synced',
-    communityStructures: [{ type: 'FPO', name: 'Kisan Kalyan Samiti' }],
-    syncedAt: '2026-09-13T16:15:00Z',
-    volunteerName: 'Priya Meena',
-    farmers: [
-      { _id: 'f_201', name: 'Mohan Singh Lodhi', contactInfo: '+91 98931 77889', landSize: 5.0, crops: ['Soybean', 'Mustard'], potentialVle: true, notes: 'Mechanical aptitude, former workshop apprentice' },
-      { _id: 'f_202', name: 'Kavita Verma', contactInfo: '+91 91114 99001', landSize: 3.2, crops: ['Kutki Millet'], potentialVle: false, notes: 'Interested in post-harvest millet processing' }
-    ],
-    needsAssessment: {
-      conductedBy: 'Priya Meena',
-      processesEvaluated: [
-        { stage: 'Land Prep', notes: 'Local hiring cost is Rs. 1400/hr, unaffordable for smallholders' },
-        { stage: 'Sowing', notes: 'Farmers requesting multi-crop planter' },
-        { stage: 'Harvesting', notes: 'Rain threat during harvest; thresher needed quickly' }
-      ],
-      gapsIdentified: ['Multi-Crop Planter', 'Rotavator', 'Solar Dehydrator'],
-      farmerRequests: [
-        { _id: 'req_3', farmerName: 'Mohan Singh Lodhi', requestType: 'Rotavator', urgency: 'High', notes: 'Soil hardpan requires deep tillage', status: 'open' }
-      ]
-    }
-  },
-  {
-    _id: 'vlg_003',
-    name: 'Dahod Dam Forest Hamlet',
-    location: { type: 'Point', coordinates: [77.581, 22.894] },
-    farmerCount: 95,
-    majorCrops: ['Indigenous Maize', 'Jowar', 'Lentils'],
-    waterResources: 'Dam Backwater Canal',
-    acres: 240,
-    readinessStage: 'vle-active',
-    viableStatus: 'confirmed',
-    status: 'synced',
-    communityStructures: [{ type: 'SHG', name: 'Vanvasi Vikas Mandal' }],
-    syncedAt: '2026-09-11T09:00:00Z',
-    volunteerName: 'Amit Chouhan',
-    farmers: [
-      { _id: 'f_301', name: 'Dinesh Gond', contactInfo: '+91 96300 22334', landSize: 3.8, crops: ['Indigenous Maize'], potentialVle: false, notes: 'Active renter of Foundation power weeder' }
-    ],
-    needsAssessment: {
-      conductedBy: 'Amit Chouhan',
-      processesEvaluated: [
-        { stage: 'Weeding', notes: 'Successfully covered 45 acres via VLE Mahesh' }
-      ],
-      gapsIdentified: ['Multi-crop Thresher'],
-      farmerRequests: [
-        { _id: 'req_4', farmerName: 'Dinesh Gond', requestType: 'Thresher', urgency: 'Low', notes: 'Required next month during harvest', status: 'fulfilled' }
-      ]
-    }
-  }
-];
+// ---------------------------------------------------------------------------
+// Small normalization helpers - the real backend's field names/shapes differ
+// in places from what AdminDashboard.jsx was built to render against (which
+// was modeled on the old mock data). We adapt the data here so the component
+// doesn't need structural rewrites.
+// ---------------------------------------------------------------------------
 
-const DEFAULT_VLES = [
-  {
-    _id: 'vle_001',
-    name: 'Mahesh Kumar Ahirwar',
-    contactInfo: '+91 97130 88219',
-    villageId: 'vlg_003',
-    villageName: 'Dahod Dam Forest Hamlet',
-    trainingStatus: 'completed',
-    accountStatus: 'active', // 'locked' | 'active'
-    assignedEquipment: [
-      { machineId: 'MCH-PW-01', machineType: 'Heavy-Duty Power Weeder 7HP', ownership: 'Foundation', assignedDate: '2026-08-15' },
-      { machineId: 'MCH-SD-04', machineType: 'Zero-Till Multi-Crop Seed Drill', ownership: 'Foundation', assignedDate: '2026-08-20' }
-    ],
-    totalEarnings: 34850,
-    totalAcresCovered: 86.5,
-    totalRentalHours: 114,
-    rating: 4.8,
-    createdAt: '2026-08-10T12:00:00Z'
-  },
-  {
-    _id: 'vle_002',
-    name: 'Devendra Malviya',
-    contactInfo: '+91 98270 44192',
-    villageId: 'vlg_002',
-    villageName: 'Bairagarh Kalan',
-    trainingStatus: 'pending',
-    accountStatus: 'locked', // locked until admin marks training complete
-    assignedEquipment: [
-      { machineId: 'MCH-ROT-02', machineType: 'Tractor Rotavator 5 Feet', ownership: 'Foundation', assignedDate: '2026-09-02' }
-    ],
-    totalEarnings: 0,
-    totalAcresCovered: 0,
-    totalRentalHours: 0,
-    rating: 5.0,
-    createdAt: '2026-09-01T15:00:00Z'
-  }
-];
-
-const DEFAULT_RENTALS = [
-  {
-    _id: 'tx_101',
-    vleId: 'vle_001',
-    vleName: 'Mahesh Kumar Ahirwar',
-    farmerName: 'Dinesh Gond',
-    villageName: 'Dahod Dam Forest Hamlet',
-    machineId: 'MCH-PW-01',
-    machineName: 'Heavy-Duty Power Weeder 7HP',
-    date: '2026-09-12',
-    durationHours: 5,
-    acresCovered: 3.5,
-    feeCharged: 1750,
-    syncStatus: 'synced',
-    notes: 'Weeding in maize field before fertilizer application'
-  },
-  {
-    _id: 'tx_102',
-    vleId: 'vle_001',
-    vleName: 'Mahesh Kumar Ahirwar',
-    farmerName: 'Kallu Ram',
-    villageName: 'Dahod Dam Forest Hamlet',
-    machineId: 'MCH-SD-04',
-    machineName: 'Zero-Till Multi-Crop Seed Drill',
-    date: '2026-09-10',
-    durationHours: 6.5,
-    acresCovered: 5.0,
-    feeCharged: 2600,
-    syncStatus: 'synced',
-    notes: 'Precise line sowing of Khapli wheat demo plot'
-  },
-  {
-    _id: 'tx_103',
-    vleId: 'vle_001',
-    vleName: 'Mahesh Kumar Ahirwar',
-    farmerName: 'Shanti Devi',
-    villageName: 'Dahod Dam Forest Hamlet',
-    machineId: 'MCH-PW-01',
-    machineName: 'Heavy-Duty Power Weeder 7HP',
-    date: '2026-09-08',
-    durationHours: 4,
-    acresCovered: 2.8,
-    feeCharged: 1400,
-    syncStatus: 'synced',
-    notes: 'Inter-row weeding in pulse intercropping'
-  }
-];
-
-const DEFAULT_SUPPORT_REQUESTS = [
-  {
-    _id: 'sup_01',
-    vleId: 'vle_001',
-    vleName: 'Mahesh Kumar Ahirwar',
-    type: 'Maintenance',
-    urgency: 'High',
-    message: 'Seed drill furrow opener blade got chipped on stony patch near riverbed. Need spare blade dispatched from Bhopal store.',
-    status: 'open',
-    date: '2026-09-14T08:30:00Z',
-    adminResponse: ''
-  },
-  {
-    _id: 'sup_02',
-    vleId: 'vle_001',
-    vleName: 'Mahesh Kumar Ahirwar',
-    type: 'Equipment Request',
-    urgency: 'Medium',
-    message: 'Farmers in neighboring hamlet Jamun Tola requesting multi-crop thresher for October harvest. Demand exceeds 60 acres.',
-    status: 'open',
-    date: '2026-09-12T14:20:00Z',
-    adminResponse: ''
-  }
-];
-
-const DEFAULT_AI_REPORTS = [
-  {
-    _id: 'rep_01',
-    title: 'Pre-Rabi Sowing Machinery Deficit Summary',
-    generatedAt: '2026-09-14T18:00:00Z',
-    model: 'gpt-4o-mini (Aggregated Pipeline)',
-    summary: 'Across 3 surveyed sanctuary villages (425 smallholder farmers), a critical 82-acre bottleneck exists for Line Sowing and Seed Drills over the next 14 calendar days. In Ratapani Khurd, broadcast sowing is causing an estimated 28% yield reduction.',
-    keyBottlenecks: [
-      { village: 'Ratapani Khurd', gap: '35 farmers awaiting Zero-Till Seed Drill. Potential seed wastage: 1.8 Tons.' },
-      { village: 'Bairagarh Kalan', gap: 'Hardpan soil requires immediate 5-ft rotavator tillage before soil moisture drops.' }
-    ],
-    recommendedAction: 'Deploy 2 additional Foundation-owned Seed Drills to Ratapani cluster and fast-track VLE Devendra training in Bairagarh Kalan to unlock rotavator operations.'
-  },
-  {
-    _id: 'rep_02',
-    title: 'Indigenous Crop Machinery Affordability Analysis',
-    generatedAt: '2026-09-11T12:00:00Z',
-    model: 'gpt-4o-mini (Aggregated Pipeline)',
-    summary: 'Smallholder farmers cultivating Khapli wheat and Kodo millets report that commercial private rental charges (Rs. 1,400-1,800/hr) absorb 46% of their seasonal gross margin. Foundation VLE subsidized pricing (Rs. 350-450/hr) generates Rs. 1,120 net savings per acre.',
-    keyBottlenecks: [
-      { village: 'Dahod Dam Forest Hamlet', gap: 'High demand for specialized small-millet huller unit to eliminate manual pounding.' }
-    ],
-    recommendedAction: 'Procure 1 community-scale millet huller tagged as Foundation ownership and assign to VLE Mahesh Kumar.'
-  }
-];
-
-// Helper to load or initialize localStorage
-function loadLocal(key, defaultData) {
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) return JSON.parse(saved);
-  } catch (e) {
-    console.warn('LocalStorage error, using default data', e);
-  }
-  return defaultData;
+function prettifyStage(stage) {
+  if (!stage) return '';
+  return stage
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
-function saveLocal(key, data) {
-  try {
-    localStorage.setItem(key, JSON.stringify(data));
-  } catch (e) {
-    console.warn('LocalStorage save error', e);
-  }
+function capitalize(str) {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function normalizeFarmer(f) {
+  return {
+    _id: f._id,
+    name: f.name,
+    contactInfo: f.contactInfo || f.phone || '',
+    landSize: f.landSize,
+    crops: f.crops || [],
+    potentialVle: !!f.isPotentialVLE,
+    notes: f.notes || '',
+  };
+}
+
+// The real Village schema has no "viableStatus" field - readinessStage is the
+// real source of truth. We derive a pending/confirmed flag from it so the
+// existing UI (built around a mock "viableStatus" field) keeps working:
+// 'identified' = not yet confirmed viable, 'assessed'/'vle-active' = confirmed.
+function deriveViableStatus(readinessStage) {
+  return readinessStage === 'identified' ? 'pending' : 'confirmed';
+}
+
+function normalizeVillage(village, farmers, assessment) {
+  return {
+    _id: village._id,
+    name: village.name,
+    district: village.district,
+    block: village.block,
+    location: village.location,
+    farmerCount: village.farmerCount,
+    majorCrops: village.majorCrops || [],
+    waterResources: Array.isArray(village.waterResources)
+      ? village.waterResources.join(', ')
+      : village.waterResources || '',
+    acres: village.acres,
+    communityStructures: village.communityStructures || [],
+    readinessStage: village.readinessStage,
+    viableStatus: deriveViableStatus(village.readinessStage),
+    status: village.status,
+    activeVleId: village.activeVleId,
+    syncedAt: village.updatedAt || village.createdAt,
+    volunteerName: village.createdBy?.name || 'Field Volunteer',
+    farmers: (farmers || []).map(normalizeFarmer),
+    needsAssessment: {
+      conductedBy: assessment?.conductedBy || '',
+      processesEvaluated: (assessment?.processesEvaluated || []).map((p) => ({
+        stage: prettifyStage(p.stage),
+        notes: p.notes || p.challengesFaced || p.currentPractice || '',
+      })),
+      gapsIdentified: assessment?.gapsIdentified || [],
+      farmerRequests: (assessment?.farmerRequests || []).map((r) => ({
+        _id: r._id,
+        farmerName: r.farmerName,
+        requestType: r.requestType,
+        urgency: capitalize(r.urgency),
+        notes: r.notes || '',
+        status: r.status,
+      })),
+    },
+  };
+}
+
+function normalizeVLE(vle) {
+  const villageId = vle.villageId && typeof vle.villageId === 'object' ? vle.villageId._id : vle.villageId;
+  const villageName = vle.villageId && typeof vle.villageId === 'object' ? vle.villageId.name : vle.villageName;
+  return {
+    ...vle,
+    villageId,
+    villageName,
+    contactInfo: vle.contactInfo?.phone || vle.phone || '',
+    trainingCompleted: vle.trainingStatus === 'completed',
+  };
+}
+
+function normalizeSupportRequest(r) {
+  const vle = r.vleId && typeof r.vleId === 'object' ? r.vleId : null;
+  return {
+    ...r,
+    vleId: vle?._id || r.vleId,
+    vleName: vle?.name || r.vleName || 'Unknown VLE',
+    villageName: vle?.villageId?.name || r.villageName || '',
+  };
+}
+
+// Fetch every village along with its farmer roster and latest needs
+// assessment. There is no single aggregate endpoint that returns this, so -
+// same fan-out pattern used in volunteerService.js - we list villages then
+// fetch each village's detail in parallel. Fine at this app's scale; would
+// need a dedicated aggregate endpoint if the village count grows large.
+async function loadVillagesFull() {
+  const listRes = await request('/api/villages?limit=500');
+  const villages = listRes?.data?.villages || [];
+
+  const details = await Promise.all(
+    villages.map(async (v) => {
+      try {
+        const detailRes = await request(`/api/villages/${v._id}`);
+        return {
+          village: detailRes?.data?.village || v,
+          farmers: detailRes?.data?.farmers || [],
+          assessment: detailRes?.data?.latestAssessment || null,
+        };
+      } catch {
+        // If a single village's detail fetch fails, fall back to the list
+        // record so one bad record doesn't break the whole dashboard.
+        return { village: v, farmers: [], assessment: null };
+      }
+    })
+  );
+
+  return details;
 }
 
 export const adminDataService = {
   // 1. Villages & Synced Data
   async getVillages() {
-    try {
-      const res = await fetch('/api/villages');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          return data.data;
-        }
-      }
-    } catch {
-      // Backend/DB offline: Fall back seamlessly to rollback data
-    }
-    return loadLocal(STORAGE_KEY_VILLAGES, DEFAULT_VILLAGES);
+    const details = await loadVillagesFull();
+    return details.map((d) => normalizeVillage(d.village, d.farmers, d.assessment));
   },
 
-  confirmViableVillage(villageId) {
-    const villages = loadLocal(STORAGE_KEY_VILLAGES, DEFAULT_VILLAGES);
-    const updated = villages.map((v) => {
-      if (v._id === villageId) {
-        return {
-          ...v,
-          viableStatus: 'confirmed',
-          readinessStage: v.readinessStage === 'identified' ? 'assessed' : v.readinessStage
-        };
-      }
-      return v;
+  // Real Village schema has no "confirm viable" endpoint or field - the real
+  // equivalent is advancing readinessStage past 'identified' via PUT
+  // /api/villages/:id. If it's already past 'identified' this is a no-op PUT.
+  async confirmViableVillage(villageId) {
+    const current = await request(`/api/villages/${villageId}`);
+    const stage = current?.data?.village?.readinessStage;
+    const nextStage = stage === 'identified' ? 'assessed' : stage;
+    await request(`/api/villages/${villageId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ readinessStage: nextStage }),
     });
-    saveLocal(STORAGE_KEY_VILLAGES, updated);
-    return updated;
+    return adminDataService.getVillages();
   },
 
   // 2. VLE Operations
   async getVLEs() {
-    try {
-      const res = await fetch('/api/vle');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          return data.data;
-        }
-      }
-    } catch {
-      // Rollback fallback
-    }
-    return loadLocal(STORAGE_KEY_VLES, DEFAULT_VLES);
+    const res = await request('/api/vle');
+    return (res?.data || []).map(normalizeVLE);
   },
 
-  onboardVLE({ name, contactInfo, villageId, villageName }) {
-    const vles = loadLocal(STORAGE_KEY_VLES, DEFAULT_VLES);
-    const newVLE = {
-      _id: `vle_${Date.now()}`,
-      name,
-      contactInfo,
-      villageId,
-      villageName,
-      trainingStatus: 'pending',
-      accountStatus: 'locked', // locked until marked complete
-      assignedEquipment: [],
-      totalEarnings: 0,
-      totalAcresCovered: 0,
-      totalRentalHours: 0,
-      rating: 5.0,
-      createdAt: new Date().toISOString()
-    };
-    const updated = [newVLE, ...vles];
-    saveLocal(STORAGE_KEY_VLES, updated);
-    return updated;
-  },
-
-  markTrainingComplete(vleId) {
-    const vles = loadLocal(STORAGE_KEY_VLES, DEFAULT_VLES);
-    const updated = vles.map((v) => {
-      if (v._id === vleId) {
-        return {
-          ...v,
-          trainingStatus: 'completed',
-          accountStatus: 'active' // unlocks VLE account access
-        };
-      }
-      return v;
+  async onboardVLE({ name, contactInfo, villageId }) {
+    await request('/api/vle', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        phone: contactInfo,
+        contactInfo: { phone: contactInfo },
+        villageId,
+      }),
     });
-    saveLocal(STORAGE_KEY_VLES, updated);
-    return updated;
+    return adminDataService.getVLEs();
   },
 
-  assignEquipment(vleId, { machineType, machineId }) {
-    const vles = loadLocal(STORAGE_KEY_VLES, DEFAULT_VLES);
-    const updated = vles.map((v) => {
-      if (v._id === vleId) {
-        const newMachine = {
-          machineId: machineId || `MCH-${Math.floor(100 + Math.random() * 900)}`,
-          machineType,
-          ownership: 'Foundation', // strictly tagged as Foundation
-          assignedDate: new Date().toISOString().split('T')[0]
-        };
-        return {
-          ...v,
-          assignedEquipment: [...v.assignedEquipment, newMachine]
-        };
-      }
-      return v;
+  async markTrainingComplete(vleId) {
+    await request(`/api/vle/${vleId}/training`, { method: 'PUT' });
+    return adminDataService.getVLEs();
+  },
+
+  async assignEquipment(vleId, { machineType, machineId }) {
+    await request(`/api/vle/${vleId}/equipment`, {
+      method: 'PUT',
+      body: JSON.stringify({ machineId, machineType }),
     });
-    saveLocal(STORAGE_KEY_VLES, updated);
-    return updated;
+    return adminDataService.getVLEs();
   },
 
   // 3. Rental Transactions & Performance Logs
+  // There is no aggregate "all rental transactions" endpoint - admin can only
+  // fetch logs per-VLE (GET /api/transactions/vle/:id). We fan out across
+  // every VLE and flatten the results, same pattern as village farmers/
+  // assessments in volunteerService.js.
   async getRentalLogs() {
-    try {
-      const res = await fetch('/api/transactions');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          return data.data;
+    const vles = await adminDataService.getVLEs();
+    const perVle = await Promise.all(
+      vles.map(async (vle) => {
+        try {
+          const res = await request(`/api/transactions/vle/${vle._id}?limit=200`);
+          const transactions = res?.data?.transactions || [];
+          return transactions.map((t) => ({
+            _id: t._id,
+            transactionId: t._id,
+            date: t.date ? new Date(t.date).toLocaleDateString() : '',
+            vleId: vle._id,
+            vleName: vle.name,
+            villageName: t.villageId?.name || vle.villageName || '',
+            farmerName: t.farmerName,
+            machineId: t.machineId,
+            machineType: t.machineType,
+            hoursUsed: t.durationHours || 0,
+            acresCovered: t.acresCovered || 0,
+            rentalFee: t.feeCharged || 0,
+            status: t.paymentStatus === 'paid' ? 'completed' : t.paymentStatus || t.syncStatus,
+          }));
+        } catch {
+          return [];
         }
-      }
-    } catch {
-      // Rollback fallback
-    }
-    return loadLocal(STORAGE_KEY_RENTALS, DEFAULT_RENTALS);
+      })
+    );
+    return perVle.flat();
   },
 
   // 4. Open & Unfulfilled Farmer Requests
-  getFarmerRequests() {
-    const villages = loadLocal(STORAGE_KEY_VILLAGES, DEFAULT_VILLAGES);
+  // Farmer requests live embedded inside NeedsAssessment documents, not as a
+  // standalone collection. GET /api/requests/open only returns open ones, but
+  // the dashboard's filter also needs "fulfilled"/"all", so we derive the
+  // full list (every status) from each village's latest assessment via the
+  // same village fan-out used by getVillages().
+  async getFarmerRequests() {
+    const details = await loadVillagesFull();
     const requests = [];
-    villages.forEach((v) => {
-      if (v.needsAssessment?.farmerRequests) {
-        v.needsAssessment.farmerRequests.forEach((req) => {
-          requests.push({
-            ...req,
-            villageId: v._id,
-            villageName: v.name
-          });
+    details.forEach(({ village, assessment }) => {
+      (assessment?.farmerRequests || []).forEach((r) => {
+        requests.push({
+          _id: r._id,
+          farmerName: r.farmerName,
+          requestType: r.requestType,
+          urgency: capitalize(r.urgency),
+          notes: r.notes || '',
+          status: r.status,
+          villageId: village._id,
+          villageName: village.name,
         });
-      }
+      });
     });
     return requests;
   },
 
-  fulfillFarmerRequest(requestId) {
-    const villages = loadLocal(STORAGE_KEY_VILLAGES, DEFAULT_VILLAGES);
-    const updated = villages.map((v) => {
-      if (v.needsAssessment?.farmerRequests) {
-        const updatedReqs = v.needsAssessment.farmerRequests.map((r) => {
-          if (r._id === requestId) {
-            return { ...r, status: 'fulfilled' };
-          }
-          return r;
-        });
-        return {
-          ...v,
-          needsAssessment: { ...v.needsAssessment, farmerRequests: updatedReqs }
-        };
-      }
-      return v;
+  async fulfillFarmerRequest(requestId) {
+    await request(`/api/requests/${requestId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'fulfilled' }),
     });
-    saveLocal(STORAGE_KEY_VILLAGES, updated);
-    return updated;
+    return adminDataService.getVillages();
   },
 
   // 5. Support / Contact Requests from VLEs
   async getSupportRequests() {
-    try {
-      const res = await fetch('/api/support');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          return data.data;
-        }
-      }
-    } catch {
-      // Rollback fallback
-    }
-    return loadLocal(STORAGE_KEY_SUPPORT, DEFAULT_SUPPORT_REQUESTS);
+    const res = await request('/api/support/requests');
+    return (res?.data || []).map(normalizeSupportRequest);
   },
 
-  respondToSupportRequest(requestId, responseText) {
-    const requests = loadLocal(STORAGE_KEY_SUPPORT, DEFAULT_SUPPORT_REQUESTS);
-    const updated = requests.map((r) => {
-      if (r._id === requestId) {
-        return {
-          ...r,
-          status: 'resolved',
-          adminResponse: responseText,
-          respondedAt: new Date().toISOString()
-        };
-      }
-      return r;
+  async respondToSupportRequest(requestId, responseText) {
+    await request(`/api/support/requests/${requestId}/respond`, {
+      method: 'PATCH',
+      body: JSON.stringify({ adminResponse: responseText, status: 'resolved' }),
     });
-    saveLocal(STORAGE_KEY_SUPPORT, updated);
-    return updated;
+    return adminDataService.getSupportRequests();
   },
 
   // 6. AI-Generated Machinery Need Reports
+  // The real endpoint returns ONE aggregated report (a single global AI
+  // summary + a per-village demand breakdown), not a list of independent
+  // per-village AI reports like the mock UI expects. We turn each village's
+  // demand entry into a "report card", and synthesize a short per-village
+  // summary from its own data (the true AI summary is global, not
+  // per-village, so it can't be honestly split up) - and add one extra card
+  // at the top carrying the full real AI-generated executive summary.
   async getAIReports() {
-    try {
-      const res = await fetch('/api/reports/machinery-need');
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.data && Array.isArray(data.data) && data.data.length > 0) {
-          return data.data;
-        }
-      }
-    } catch {
-      // Rollback fallback
+    const res = await request('/api/reports/machinery-need');
+    const data = res?.data;
+    if (!data) return [];
+
+    const cards = [];
+
+    if (data.aiSummary) {
+      cards.push({
+        _id: 'overview',
+        villageName: 'All Villages — Executive Summary',
+        deficitScore: Math.min(100, (data.totalVillagesAnalyzed || 0) * 5),
+        aiSummary: data.aiSummary,
+        highDemandMachines: [],
+        recommendedActions: [],
+      });
     }
-    return loadLocal(STORAGE_KEY_REPORTS, DEFAULT_AI_REPORTS);
-  }
+
+    (data.aggregatedDemand || []).forEach((item, idx) => {
+      const highDemandMachines = Object.keys(item.demandsByType || {});
+      const deficitScore = Math.min(
+        100,
+        (item.openRequestsCount || 0) * 20 + (item.operationalGaps || []).length * 10
+      );
+      cards.push({
+        _id: `${item.villageName || 'village'}-${idx}`,
+        villageName: item.villageName || 'Unknown Village',
+        deficitScore,
+        aiSummary: `${item.openRequestsCount || 0} open farmer request(s) in ${item.district || 'this district'}. Operational gaps: ${
+          (item.operationalGaps || []).join(', ') || 'none reported'
+        }.`,
+        highDemandMachines,
+        recommendedActions: (item.operationalGaps || []).map(
+          (gap) => `Address: ${gap}`
+        ),
+      });
+    });
+
+    return cards;
+  },
 };
 
 export default adminDataService;
