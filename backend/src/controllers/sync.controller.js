@@ -1,82 +1,136 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Village } from "../models/village.model.js";
-import { Farmer } from "../models/farmer.model.js";
-import { NeedsAssessment } from "../models/needsAssessment.model.js";
-import { RentalTransaction } from "../models/rentalTransaction.model.js";
+import { Village, Farmer, NeedsAssessment, RentalTransaction, VLE } from "../models/index.js";
 
-// Idempotent upsert-by-offlineId for one collection of queued offline records.
-// Each item is applied independently so one bad record can't fail the whole batch.
-const syncCollection = async (Model, items = [], extraOnInsert = {}) => {
-    let synced = 0;
-    const conflicts = [];
+/**
+ * Batch Push Queued Offline Records (Dexie.js -> MongoDB)
+ * POST /api/sync/batch
+ */
+export const batchSyncOfflineData = asyncHandler(async (req, res) => {
+    const {
+        villages = [],
+        farmers = [],
+        assessments = [],
+        transactions = [],
+    } = req.body;
 
-    for (const item of items) {
-        const { offlineId, _id, ...rest } = item || {};
+    const results = {
+        villages: { created: 0, updated: 0 },
+        farmers: { created: 0, updated: 0 },
+        assessments: { created: 0, updated: 0 },
+        transactions: { created: 0, updated: 0 },
+    };
 
-        if (!offlineId) {
-            conflicts.push({ item, reason: "Missing offlineId" });
-            continue;
-        }
+    // 1. Sync Villages
+    for (const vData of villages) {
+        if (!vData.offlineId && !vData._id) continue;
+        const query = vData.offlineId ? { offlineId: vData.offlineId } : { _id: vData._id };
 
-        try {
-            await Model.findOneAndUpdate(
-                { offlineId },
-                {
-                    $set: rest,
-                    $setOnInsert: { offlineId, ...extraOnInsert },
-                },
-                { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
-            );
-            synced++;
-        } catch (error) {
-            conflicts.push({ offlineId, reason: error.message });
+        const updateData = {
+            ...vData,
+            status: "synced",
+        };
+        delete updateData._id;
+
+        const existing = await Village.findOne(query);
+        if (existing) {
+            await Village.updateOne(query, { $set: updateData });
+            results.villages.updated++;
+        } else {
+            await Village.create({
+                ...updateData,
+                createdBy: req.user._id,
+            });
+            results.villages.created++;
         }
     }
 
-    return { synced, conflicts };
-};
+    // 2. Sync Farmers
+    for (const fData of farmers) {
+        if (!fData.offlineId && !fData._id) continue;
+        const query = fData.offlineId ? { offlineId: fData.offlineId } : { _id: fData._id };
 
-const batchSync = asyncHandler(async (req, res) => {
-    const { villages = [], farmers = [], assessments = [], transactions = [] } = req.body;
+        const updateData = { ...fData };
+        delete updateData._id;
 
-    const vleFallbackId = req.user.role === "vle" ? req.user.linkedVleId : undefined;
+        const existing = await Farmer.findOne(query);
+        if (existing) {
+            await Farmer.updateOne(query, { $set: updateData });
+            results.farmers.updated++;
+        } else {
+            await Farmer.create(updateData);
+            results.farmers.created++;
+            if (updateData.villageId) {
+                await Village.findByIdAndUpdate(updateData.villageId, { $inc: { farmerCount: 1 } });
+            }
+        }
+    }
 
-    const [villageResult, farmerResult, assessmentResult, transactionResult] = await Promise.all([
-        syncCollection(Village, villages, { createdBy: req.user._id }),
-        syncCollection(Farmer, farmers),
-        syncCollection(NeedsAssessment, assessments, { conductedBy: req.user._id }),
-        syncCollection(
-            RentalTransaction,
-            transactions.map((t) => (t?.vleId ? t : { ...t, vleId: vleFallbackId })),
-            { syncStatus: "synced" }
-        ),
-    ]);
+    // 3. Sync Needs Assessments
+    for (const aData of assessments) {
+        if (!aData.offlineId && !aData._id) continue;
+        const query = aData.offlineId ? { offlineId: aData.offlineId } : { _id: aData._id };
 
-    const summary = {
-        villages: villageResult,
-        farmers: farmerResult,
-        assessments: assessmentResult,
-        transactions: transactionResult,
-    };
+        const updateData = {
+            ...aData,
+            status: "synced",
+        };
+        delete updateData._id;
 
-    const totalSynced =
-        villageResult.synced + farmerResult.synced + assessmentResult.synced + transactionResult.synced;
-    const totalConflicts =
-        villageResult.conflicts.length +
-        farmerResult.conflicts.length +
-        assessmentResult.conflicts.length +
-        transactionResult.conflicts.length;
+        const existing = await NeedsAssessment.findOne(query);
+        if (existing) {
+            await NeedsAssessment.updateOne(query, { $set: updateData });
+            results.assessments.updated++;
+        } else {
+            await NeedsAssessment.create({
+                ...updateData,
+                conductedBy: req.user._id,
+            });
+            results.assessments.created++;
+            if (updateData.villageId) {
+                await Village.findByIdAndUpdate(updateData.villageId, { readinessStage: "assessed" });
+            }
+        }
+    }
+
+    // 4. Sync Rental Transactions
+    for (const tData of transactions) {
+        if (!tData.offlineId && !tData._id) continue;
+        const query = tData.offlineId ? { offlineId: tData.offlineId } : { _id: tData._id };
+
+        const updateData = {
+            ...tData,
+            syncStatus: "synced",
+        };
+        delete updateData._id;
+
+        const existing = await RentalTransaction.findOne(query);
+        if (existing) {
+            await RentalTransaction.updateOne(query, { $set: updateData });
+            results.transactions.updated++;
+        } else {
+            const createdTx = await RentalTransaction.create(updateData);
+            results.transactions.created++;
+            // Increment VLE running totals
+            if (createdTx.vleId) {
+                await VLE.findByIdAndUpdate(createdTx.vleId, {
+                    $inc: {
+                        totalEarnings: Number(createdTx.feeCharged || 0),
+                        totalRentalsCount: 1,
+                        totalAcresServiced: Number(createdTx.acresCovered || 0),
+                    },
+                });
+            }
+        }
+    }
 
     return res
         .status(200)
         .json(
             new ApiResponse(
                 200,
-                summary,
-                `Synced ${totalSynced} record(s)${totalConflicts ? `, ${totalConflicts} conflict(s)` : ""}`
+                results,
+                "Batch offline data synchronized successfully"
             )
         );
 });
-
-export { batchSync };

@@ -2,10 +2,13 @@ import mongoose from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Farmer, EDUCATION_QUALIFICATIONS } from "../models/farmer.model.js";
-import { Village } from "../models/village.model.js";
+import { Farmer, Village, EDUCATION_QUALIFICATIONS } from "../models/index.js";
 
-const addFarmer = asyncHandler(async (req, res) => {
+/**
+ * Add a farmer record under a village
+ * POST /api/villages/:villageId/farmers
+ */
+export const addFarmer = asyncHandler(async (req, res) => {
     const { villageId } = req.params;
 
     if (!mongoose.isValidObjectId(villageId)) {
@@ -56,25 +59,32 @@ const addFarmer = asyncHandler(async (req, res) => {
 
     const farmer = await Farmer.create({
         villageId,
-        name,
-        phone,
-        contactInfo,
-        landSize,
-        landholdingType,
-        crops,
-        isPotentialVLE,
-        education,
-        sourcesOfIncome,
-        notes,
-        offlineId,
+        name: name.trim(),
+        phone: phone ? phone.trim() : "",
+        contactInfo: contactInfo ? contactInfo.trim() : phone ? phone.trim() : "",
+        landSize: Number(landSize),
+        landholdingType: landholdingType || "small",
+        crops: Array.isArray(crops) ? crops : [],
+        isPotentialVLE: Boolean(isPotentialVLE),
+        education: education || "No Formal Education",
+        sourcesOfIncome: Array.isArray(sourcesOfIncome) ? sourcesOfIncome : [],
+        notes: notes || "",
+        offlineId: offlineId || undefined,
     });
+
+    // Keep the village's farmerCount in sync
+    await Village.findByIdAndUpdate(villageId, { $inc: { farmerCount: 1 } });
 
     return res
         .status(201)
         .json(new ApiResponse(201, farmer, "Farmer added successfully"));
 });
 
-const getFarmersInVillage = asyncHandler(async (req, res) => {
+/**
+ * List all farmers in a village
+ * GET /api/villages/:villageId/farmers
+ */
+export const getFarmersInVillage = asyncHandler(async (req, res) => {
     const { villageId } = req.params;
 
     if (!mongoose.isValidObjectId(villageId)) {
@@ -88,7 +98,11 @@ const getFarmersInVillage = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, farmers, "Farmers fetched successfully"));
 });
 
-const getVLECandidates = asyncHandler(async (req, res) => {
+/**
+ * Identify potential VLE candidates in a village (Admin Only)
+ * GET /api/villages/:villageId/candidates
+ */
+export const getVLECandidates = asyncHandler(async (req, res) => {
     const { villageId } = req.params;
 
     if (!mongoose.isValidObjectId(villageId)) {
@@ -98,11 +112,9 @@ const getVLECandidates = asyncHandler(async (req, res) => {
     const candidates = await Farmer.find(
         { villageId, isPotentialVLE: true },
         { name: 1, phone: 1, education: 1, landSize: 1, landholdingType: 1, sourcesOfIncome: 1 }
-    ).sort({ createdAt: -1 });
+    ).sort({ landSize: -1 });
 
     return res
         .status(200)
         .json(new ApiResponse(200, candidates, "VLE candidates fetched successfully"));
 });
-
-export { addFarmer, getFarmersInVillage, getVLECandidates };

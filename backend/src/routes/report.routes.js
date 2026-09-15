@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { getMachineryNeedReport } from "../controllers/report.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { requireRole } from "../middlewares/role.middleware.js";
+import { verifyJWT, requireRoles } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/machinery-need").get(verifyJWT, requireRole("admin"), getMachineryNeedReport);
+// AI-generated machinery demand report (Per TRD page 4-5)
+router
+    .route("/machinery-need")
+    .get(verifyJWT, requireRoles("admin"), getMachineryNeedReport);
 
 export default router;

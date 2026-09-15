@@ -2,11 +2,14 @@ import mongoose from "mongoose";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { NeedsAssessment } from "../models/needsAssessment.model.js";
-import { Village } from "../models/village.model.js";
+import { NeedsAssessment, Village } from "../models/index.js";
 
 const REQUEST_STATUSES = ["open", "fulfilled", "cancelled"];
 
+/**
+ * Submit needs assessment for a village
+ * POST /api/villages/:villageId/needs-assessment
+ */
 const submitAssessment = asyncHandler(async (req, res) => {
     const { villageId } = req.params;
 
@@ -34,19 +37,29 @@ const submitAssessment = asyncHandler(async (req, res) => {
 
     const assessment = await NeedsAssessment.create({
         villageId,
-        processesEvaluated,
-        gapsIdentified,
-        farmerRequests,
-        summaryNotes,
+        processesEvaluated: Array.isArray(processesEvaluated) ? processesEvaluated : [],
+        gapsIdentified: Array.isArray(gapsIdentified) ? gapsIdentified : [],
+        farmerRequests: Array.isArray(farmerRequests) ? farmerRequests : [],
+        summaryNotes: summaryNotes || "",
         offlineId,
         conductedBy: req.user._id,
     });
+
+    // Advance village readinessStage to 'assessed' if it was still 'identified'
+    if (village.readinessStage === "identified") {
+        village.readinessStage = "assessed";
+        await village.save({ validateBeforeSave: false });
+    }
 
     return res
         .status(201)
         .json(new ApiResponse(201, assessment, "Needs assessment submitted successfully"));
 });
 
+/**
+ * Get needs assessments for a village
+ * GET /api/villages/:villageId/needs-assessment
+ */
 const getAssessmentsForVillage = asyncHandler(async (req, res) => {
     const { villageId } = req.params;
 
@@ -54,13 +67,19 @@ const getAssessmentsForVillage = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid village id");
     }
 
-    const assessments = await NeedsAssessment.find({ villageId }).sort({ createdAt: -1 });
+    const assessments = await NeedsAssessment.find({ villageId })
+        .populate("conductedBy", "name phone")
+        .sort({ createdAt: -1 });
 
     return res
         .status(200)
         .json(new ApiResponse(200, assessments, "Needs assessments fetched successfully"));
 });
 
+/**
+ * Update needs assessment
+ * PUT /api/needs-assessment/:id
+ */
 const updateAssessment = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
@@ -93,6 +112,10 @@ const updateAssessment = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, assessment, "Assessment updated successfully"));
 });
 
+/**
+ * Get all open/unfulfilled farmer requests across all villages (Admin Only)
+ * GET /api/requests/open
+ */
 const getOpenRequests = asyncHandler(async (req, res) => {
     const requests = await NeedsAssessment.aggregate([
         { $unwind: "$farmerRequests" },
@@ -105,7 +128,7 @@ const getOpenRequests = asyncHandler(async (req, res) => {
                 as: "village",
             },
         },
-        { $unwind: "$village" },
+        { $unwind: { path: "$village", preserveNullAndEmptyArrays: true } },
         {
             $project: {
                 _id: "$farmerRequests._id",
@@ -131,6 +154,10 @@ const getOpenRequests = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, requests, "Open farmer requests fetched successfully"));
 });
 
+/**
+ * Update request status (fulfilled / cancelled)
+ * PATCH /api/requests/:requestId/status
+ */
 const updateRequestStatus = asyncHandler(async (req, res) => {
     const { requestId } = req.params;
     const { status } = req.body;

@@ -1,10 +1,12 @@
 import { Router } from "express";
-import { batchSync } from "../controllers/sync.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { requireRole } from "../middlewares/role.middleware.js";
+import { batchSyncOfflineData } from "../controllers/sync.controller.js";
+import { verifyJWT, requireRoles } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/batch").post(verifyJWT, requireRole("volunteer", "vle"), batchSync);
+// Bulk-push queued offline records on network reconnect
+router
+    .route("/batch")
+    .post(verifyJWT, requireRoles("volunteer", "vle"), batchSyncOfflineData);
 
 export default router;
