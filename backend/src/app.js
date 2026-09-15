@@ -20,6 +20,8 @@ import authRouter from "./routes/auth.routes.js";
 import villageRouter from "./routes/village.routes.js";
 import farmerRouter from "./routes/farmer.routes.js";
 import needsAssessmentRouter from "./routes/needsAssessment.routes.js";
+import assessmentRouter from "./routes/assessment.routes.js";
+import requestRouter from "./routes/request.routes.js";
 import vleRouter from "./routes/vle.routes.js";
 import transactionRouter from "./routes/transaction.routes.js";
 import syncRouter from "./routes/sync.routes.js";
@@ -32,10 +34,16 @@ app.use("/api/auth", authRouter);
 app.use("/api/villages", villageRouter);
 app.use("/api/villages", farmerRouter); // Nested under /api/villages/:villageId/farmers
 app.use("/api/villages", needsAssessmentRouter); // Nested under /api/villages/:villageId/needs-assessment
+app.use("/api/needs-assessment", assessmentRouter);
+app.use("/api/requests", requestRouter);
 app.use("/api/vle", vleRouter);
 app.use("/api/transactions", transactionRouter);
 app.use("/api/sync", syncRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/support", supportRouter);
+
+// Error Handling (must be last)
+import { errorHandler } from "./middlewares/error.middleware.js";
+app.use(errorHandler);
 
 export { app }
