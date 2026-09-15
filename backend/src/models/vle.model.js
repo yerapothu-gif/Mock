@@ -65,6 +65,28 @@ const vleSchema = new Schema(
             email: { type: String, trim: true },
             address: { type: String, trim: true },
         },
+        // Educational background & candidate selection criteria (per problem doc)
+        education: {
+            qualification: {
+                type: String,
+                trim: true, // e.g., "10th Pass", "12th Pass", "Graduate", "Diploma / ITI", "Basic"
+                default: "Not Specified",
+            },
+            institution: {
+                type: String,
+                trim: true,
+            },
+        },
+        sourcesOfIncome: [
+            {
+                type: String,
+                trim: true, // e.g., "Farming", "Dairy / Livestock", "Retail Shop", "Agri-services"
+            },
+        ],
+        priorExperience: {
+            type: String,
+            trim: true, // e.g., "Tractor driving license, machinery operation experience, basic accounting"
+        },
         villageId: {
             type: Schema.Types.ObjectId,
             ref: "Village",

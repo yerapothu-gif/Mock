@@ -45,6 +45,18 @@ const farmerSchema = new Schema(
             default: false,
             index: true,
         },
+        // Educational background for VLE candidacy evaluation (per problem doc)
+        education: {
+            type: String,
+            trim: true, // e.g., "10th Pass", "12th Pass", "Graduate", "Diploma / ITI", "Literate"
+            default: "Not Specified",
+        },
+        sourcesOfIncome: [
+            {
+                type: String,
+                trim: true, // e.g., "Farming", "Dairy", "Small Business", "Agri-labor"
+            },
+        ],
         notes: {
             type: String,
             trim: true,
