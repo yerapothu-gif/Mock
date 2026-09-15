@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { EDUCATION_QUALIFICATIONS } from "./farmer.model.js";
 
 const assignedEquipmentSchema = new Schema(
     {
@@ -64,6 +65,28 @@ const vleSchema = new Schema(
             phone: { type: String, trim: true },
             email: { type: String, trim: true },
             address: { type: String, trim: true },
+        },
+        // Educational background & candidate selection criteria (per problem doc)
+        education: {
+            qualification: {
+                type: String,
+                enum: EDUCATION_QUALIFICATIONS,
+                default: "10th Pass",
+            },
+            institution: {
+                type: String,
+                trim: true,
+            },
+        },
+        sourcesOfIncome: [
+            {
+                type: String,
+                trim: true, // e.g., "Farming", "Dairy / Livestock", "Retail Shop", "Agri-services"
+            },
+        ],
+        priorExperience: {
+            type: String,
+            trim: true, // e.g., "Tractor driving license, machinery operation experience, basic accounting"
         },
         villageId: {
             type: Schema.Types.ObjectId,

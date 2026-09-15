@@ -54,9 +54,9 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
 | :--- | :--- | :--- |
 | **`User`** | `name`, `phone`, `email`, `password`, `role`, `linkedVleId`, `isActive`, `refreshToken` | `phone` (unique), bcrypt pre-save hash, `generateAccessToken()`, `generateRefreshToken()`. Roles: `volunteer`, `admin`, `vle`. |
 | **`Village`** | `name`, `district`, `block`, `location` (GeoJSON `Point`), `farmerCount`, `majorCrops`, `waterResources`, `acres`, `communityStructures`, `readinessStage`, `activeVleId`, `createdBy`, `status`, `offlineId` | `location: "2dsphere"`, text index on `name`, compound `{ district: 1, readinessStage: 1 }`. Stages: `identified`, `assessed`, `vle-active`. |
-| **`Farmer`** | `villageId`, `name`, `phone`, `contactInfo`, `landSize`, `landholdingType`, `crops`, `isPotentialVLE`, `notes`, `offlineId` | Compound `{ villageId: 1, name: 1 }`, `isPotentialVLE: 1`. Types: `marginal`, `small`, `medium`, `large`. |
+| **`Farmer`** | `villageId`, `name`, `phone`, `contactInfo`, `landSize`, `landholdingType`, `crops`, `isPotentialVLE`, `education`, `sourcesOfIncome`, `notes`, `offlineId` | Compound `{ villageId: 1, name: 1 }`, `isPotentialVLE: 1`. Types: `marginal`, `small`, `medium`, `large`. |
 | **`NeedsAssessment`** | `villageId`, `processesEvaluated` (`stage`, `challengesFaced`, `currentPractice`, `notes`), `gapsIdentified`, `farmerRequests` (`farmerId`, `farmerName`, `requestType`, `machineTypeNeeded`, `urgency`, `notes`, `status`), `conductedBy`, `status`, `offlineId` | `{ villageId: 1, createdAt: -1 }`, `{ "farmerRequests.status": 1 }`. Powers OpenAI machinery report aggregation. |
-| **`VLE`** | `name`, `phone`, `contactInfo`, `villageId`, `userId`, `trainingStatus`, `trainingCompletedAt`, `accountStatus`, `assignedEquipment`, `totalEarnings`, `totalRentalsCount`, `totalAcresServiced`, `createdBy` | `trainingStatus: "pending" \| "completed"`, `accountStatus: "locked" \| "active"`. Ownership of equipment tagged as `"Foundation"`. |
+| **`VLE`** | `name`, `phone`, `contactInfo`, `education` (`qualification`, `institution`), `sourcesOfIncome`, `priorExperience`, `villageId`, `userId`, `trainingStatus`, `trainingCompletedAt`, `accountStatus`, `assignedEquipment`, `totalEarnings`, `totalRentalsCount`, `totalAcresServiced`, `createdBy` | `trainingStatus: "pending" \| "completed"`, `accountStatus: "locked" \| "active"`. Ownership of equipment tagged as `"Foundation"`. |
 | **`RentalTransaction`**| `vleId`, `villageId`, `farmerName`, `farmerId`, `machineId`, `machineType`, `date`, `durationHours`, `acresCovered`, `feeCharged`, `paymentStatus`, `syncStatus`, `offlineId` | `{ vleId: 1, date: -1 }`. `offlineId` unique index prevents duplicate charges on reconnect sync. |
 | **`VLEContactRequest`**| `vleId`, `category`, `subject`, `message`, `urgency`, `status`, `adminResponse`, `resolvedAt`, `resolvedBy` | Categories: `equipment_request`, `maintenance_issue`, `farmer_feedback`, `general_query`. Status: `open`, `in_progress`, `resolved`. |
 
@@ -143,6 +143,8 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
 #### 1. Add Farmer under a Village
 * **`POST /api/villages/:villageId/farmers`**
 * **Access**: `volunteer`, `admin`
+* **Predefined Education Dropdown Options**:
+  `"No Formal Education"`, `"Primary (1-5th)"`, `"Middle (6-8th)"`, `"10th Pass"`, `"12th Pass"`, `"Diploma / ITI"`, `"Graduate"`, `"Postgraduate"`, `"Other"`
 * **Request Body**:
   ```json
   {
@@ -152,10 +154,17 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
     "landholdingType": "small",
     "crops": ["Wheat", "Soybean"],
     "isPotentialVLE": true,
+    "education": "10th Pass",
+    "sourcesOfIncome": ["Farming", "Dairy"],
     "notes": "Progressive farmer with tractor driving experience",
     "offlineId": "uuid-farmer-456"
   }
   ```
+* **Offline Flow**:
+  1. Volunteer records farmer details via the form dropdown offline (saved in Dexie.js with `syncStatus: "pending"`).
+  2. Upon network reconnect, record is synced to backend (`POST /api/villages/:villageId/farmers` or `/api/sync/batch`).
+  3. Data is persisted in the `Farmer` collection.
+  4. Admins query `GET /api/villages/:villageId/candidates` to view candidates with their standardized qualifications for VLE onboarding.
 
 #### 2. List Farmers in Village
 * **`GET /api/villages/:villageId/farmers`**
@@ -164,7 +173,7 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
 #### 3. Identify Potential VLE Candidates in Village
 * **`GET /api/villages/:villageId/candidates`**
 * **Access**: `admin`
-* **Query Logic**: Retrieves farmers where `isPotentialVLE: true`.
+* **Query Logic**: Retrieves farmers where `isPotentialVLE: true`, returning their educational qualifications, landholding, and income sources to support data-driven VLE selection.
 
 ---
 
@@ -327,7 +336,13 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
     "contactInfo": {
       "phone": "9826012345",
       "address": "Near Panchayat Bhavan, Barkheda"
-    }
+    },
+    "education": {
+      "qualification": "12th Pass",
+      "institution": "Govt Higher Secondary School, Obedullaganj"
+    },
+    "sourcesOfIncome": ["Farming", "Custom Hiring", "Dairy"],
+    "priorExperience": "5 years tractor driving experience, licensed driver, basic bookkeeping knowledge"
   }
   ```
 

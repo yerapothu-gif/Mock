@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { getMachineryNeedReport } from "../controllers/report.controller.js";
+import { updateAssessment } from "../controllers/needsAssessment.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.route("/machinery-need").get(verifyJWT, requireRole("admin"), getMachineryNeedReport);
+router.route("/:id").put(verifyJWT, requireRole("volunteer", "admin"), updateAssessment);
 
 export default router;
