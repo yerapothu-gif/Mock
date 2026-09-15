@@ -61,17 +61,6 @@ export const registerUser = asyncHandler(async (req, res) => {
         );
     }
 
-    // Role-gating: If users already exist in the system, only an Admin can create new accounts
-    const totalUsers = await User.countDocuments();
-    if (totalUsers > 0) {
-        if (!req.user || req.user.role !== "admin") {
-            throw new ApiError(
-                403,
-                "Forbidden: Only administrators can create new accounts"
-            );
-        }
-    }
-
     // Check if phone number is already registered
     const existingUser = await User.findOne({ phone: phone.trim() });
     if (existingUser) {
