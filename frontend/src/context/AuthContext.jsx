@@ -1,111 +1,48 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authService } from '../api/authService';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { vleService } from '../api/vleService';
-import { getAccessToken } from '../api/apiClient';
 
 const AuthContext = createContext(null);
 
+// Demo VLE user — used when login page is removed
+const DEMO_USER = {
+  _id: 'demo-vle-001',
+  name: 'Ramesh Patel',
+  phone: '9826012345',
+  role: 'vle',
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(DEMO_USER);
   const [vleProfile, setVleProfile] = useState(null);
   const [isLocked, setIsLocked] = useState(false);
   const [lockedReason, setLockedReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [authError, setAuthError] = useState(null);
-
-  const checkAuth = useCallback(async () => {
-    setIsLoading(true);
-    setAuthError(null);
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        setUser(null);
-        setVleProfile(null);
-        setIsLoading(false);
-        return;
-      }
-
-      const currentUser = await authService.getCurrentUser();
-      if (!currentUser) {
-        setUser(null);
-        setVleProfile(null);
-        setIsLoading(false);
-        return;
-      }
-
-      setUser(currentUser);
-
-      // Verify VLE profile & training lock gate
-      try {
-        const profile = await vleService.getProfile();
-        setVleProfile(profile);
-        setIsLocked(profile?.accountStatus === 'locked');
-      } catch (profileErr) {
-        if (profileErr.status === 403) {
-          setIsLocked(true);
-          setLockedReason(profileErr.message || 'Training incomplete. Account is locked.');
-        } else {
-          console.warn('VLE profile fetch issue:', profileErr);
-        }
-      }
-    } catch (err) {
-      console.error('Auth verification error:', err);
-      setAuthError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [authError] = useState(null);
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  const login = async (phone, password) => {
-    setIsLoading(true);
-    setAuthError(null);
-    try {
-      const res = await authService.login(phone, password);
-      const loggedUser = res?.user;
-      
-      if (loggedUser && loggedUser.role !== 'vle') {
-        await authService.logout();
-        throw new Error(`Role mismatch: Account '${loggedUser.name}' has role '${loggedUser.role}'. Only VLE accounts can access this portal.`);
-      }
-
-      setUser(loggedUser);
-
-      // Check VLE profile & lock status
-      try {
-        const profile = await vleService.getProfile();
+    // Auto-load VLE profile on mount (no login required)
+    vleService.getProfile()
+      .then(profile => {
         setVleProfile(profile);
         setIsLocked(profile?.accountStatus === 'locked');
-      } catch (profileErr) {
-        if (profileErr.status === 403) {
+      })
+      .catch(err => {
+        if (err?.status === 403) {
           setIsLocked(true);
-          setLockedReason(profileErr.message || 'Training incomplete. Account is locked.');
+          setLockedReason(err.message || 'Training incomplete. Account is locked.');
+        } else {
+          console.warn('VLE profile fetch issue:', err);
         }
-      }
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
-      return res;
-    } catch (err) {
-      setAuthError(err.message || 'Login failed');
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    setIsLoading(true);
-    try {
-      await authService.logout();
-    } finally {
-      setUser(null);
-      setVleProfile(null);
-      setIsLocked(false);
-      setLockedReason('');
-      setIsLoading(false);
-    }
+  const logout = () => {
+    // No-op without login — resets to demo user
+    setUser(DEMO_USER);
+    setVleProfile(null);
+    setIsLocked(false);
+    setLockedReason('');
   };
 
   const toggleAccountLock = (locked) => {
@@ -141,7 +78,6 @@ export function AuthProvider({ children }) {
         authError,
         isAuthenticated: !!user,
         isVle: user?.role === 'vle',
-        login,
         logout,
         refreshProfile,
         toggleAccountLock

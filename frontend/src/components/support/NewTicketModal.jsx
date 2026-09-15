@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { supportService } from '../../api/supportService';
 import { useToast } from '../../context/ToastContext';
-import { Send } from 'lucide-react';
+import { Send, Info } from 'lucide-react';
 
 const CATEGORIES = [
   { value: 'equipment_request', label: 'Equipment Request' },
@@ -11,11 +11,40 @@ const CATEGORIES = [
   { value: 'general_query', label: 'General Query' },
 ];
 
-export function NewTicketModal({ isOpen, onClose, onSuccess }) {
+/**
+ * NewTicketModal — also handles "edit" mode.
+ * When `initialData` is provided, it pre-fills the form and shows a
+ * re-submission notice (the API only supports POST, not PATCH for VLEs).
+ */
+export function NewTicketModal({ isOpen, onClose, onSuccess, initialData = null }) {
   const { toast } = useToast();
+  const isEditing = Boolean(initialData);
+
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ category: 'general_query', subject: '', message: '', urgency: 'medium' });
+  const [form, setForm] = useState({
+    category: 'equipment_request',
+    subject: '',
+    message: '',
+    urgency: 'medium',
+  });
   const [errors, setErrors] = useState({});
+
+  // Pre-fill form when editing
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setForm({
+          category: initialData.category || 'equipment_request',
+          subject: initialData.subject || '',
+          message: initialData.message || '',
+          urgency: initialData.urgency || 'medium',
+        });
+      } else {
+        setForm({ category: 'equipment_request', subject: '', message: '', urgency: 'medium' });
+      }
+      setErrors({});
+    }
+  }, [isOpen, initialData]);
 
   const validate = () => {
     const e = {};
@@ -38,10 +67,14 @@ export function NewTicketModal({ isOpen, onClose, onSuccess }) {
     setSubmitting(true);
     try {
       await supportService.createTicket(form);
-      toast('Support request sent to Admin successfully!', 'success');
+      toast(
+        isEditing
+          ? 'Updated request submitted successfully!'
+          : 'Support request sent to Admin successfully!',
+        'success'
+      );
       onSuccess?.();
       onClose();
-      setForm({ category: 'general_query', subject: '', message: '', urgency: 'medium' });
     } catch (err) {
       toast(err.message || 'Failed to submit support request.', 'error');
     } finally {
@@ -53,16 +86,31 @@ export function NewTicketModal({ isOpen, onClose, onSuccess }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="New Support Request"
+      title={isEditing ? 'Edit Equipment Request' : 'New Support Request'}
       footer={
         <>
           <button className="btn btn-secondary" onClick={onClose} disabled={submitting}>Cancel</button>
           <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting} id="submit-ticket-btn">
-            <Send size={15} /> {submitting ? 'Sending...' : 'Send Request'}
+            <Send size={15} /> {submitting ? 'Sending...' : isEditing ? 'Re-submit Request' : 'Send Request'}
           </button>
         </>
       }
     >
+      {/* Re-submission notice when editing */}
+      {isEditing && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          background: '#eff6ff', border: '1px solid #bfdbfe',
+          borderRadius: 'var(--radius-md)', padding: '12px 14px',
+          marginBottom: 20, fontSize: '0.82rem', color: '#1d4ed8', lineHeight: 1.5
+        }}>
+          <Info size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>
+            Editing submits a <strong>new updated request</strong> to Admin — the original ticket remains visible for Admin reference. Update the fields below and click <strong>Re-submit</strong>.
+          </span>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} noValidate>
         <div className="form-grid-2">
           <div className="form-group">
@@ -82,12 +130,24 @@ export function NewTicketModal({ isOpen, onClose, onSuccess }) {
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="ticket-subject">Subject *</label>
-          <input id="ticket-subject" name="subject" className={`form-input ${errors.subject ? 'error' : ''}`} placeholder="Brief description of the issue" value={form.subject} onChange={handleChange} />
+          <input
+            id="ticket-subject" name="subject"
+            className={`form-input ${errors.subject ? 'error' : ''}`}
+            placeholder="Brief description of the issue"
+            value={form.subject} onChange={handleChange}
+          />
           {errors.subject && <p className="field-error">{errors.subject}</p>}
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="ticket-message">Message *</label>
-          <textarea id="ticket-message" name="message" className={`form-textarea ${errors.message ? 'error' : ''}`} rows={5} placeholder="Describe your request or issue in detail..." value={form.message} onChange={handleChange} style={{ resize: 'vertical' }}></textarea>
+          <textarea
+            id="ticket-message" name="message"
+            className={`form-textarea ${errors.message ? 'error' : ''}`}
+            rows={5}
+            placeholder="Describe your request or issue in detail..."
+            value={form.message} onChange={handleChange}
+            style={{ resize: 'vertical' }}
+          />
           {errors.message && <p className="field-error">{errors.message}</p>}
         </div>
       </form>

@@ -56,6 +56,10 @@ export async function request(endpoint, options = {}) {
     }
 
     if (!response.ok) {
+      // If Vite proxy fails to connect to backend, it returns 502/503/504. Treat as network error (0) to trigger mock fallback.
+      if (response.status >= 502 && response.status <= 504) {
+        throw new ApiError(0, `Server unreachable (HTTP ${response.status})`);
+      }
       const errorBody = await safeParseJson(response);
       const message = errorBody?.message || `Request failed with status ${response.status}`;
       throw new ApiError(response.status, message, errorBody);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { transactionService } from '../../api/transactionService';
 import { syncService } from '../../api/syncService';
@@ -11,10 +11,11 @@ function FieldError({ message }) {
   return <p className="field-error">{message}</p>;
 }
 
-export function RecordRentalModal({ isOpen, onClose, equipment = [], onSuccess }) {
+export function RecordRentalModal({ isOpen, onClose, equipment = [], onSuccess, editTransaction = null }) {
   const { toast } = useToast();
   const { isOnline, refreshPendingCount } = useOffline();
   const [submitting, setSubmitting] = useState(false);
+  const isEditing = Boolean(editTransaction);
 
   const [form, setForm] = useState({
     farmerName: '',
@@ -29,6 +30,33 @@ export function RecordRentalModal({ isOpen, onClose, equipment = [], onSuccess }
   });
 
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (editTransaction) {
+      let formattedDate = new Date().toISOString().slice(0, 16);
+      try {
+        if (editTransaction.date) {
+          formattedDate = new Date(editTransaction.date).toISOString().slice(0, 16);
+        }
+      } catch {
+        // use default
+      }
+      setForm({
+        farmerName: editTransaction.farmerName || '',
+        machineId: editTransaction.machineId || '',
+        machineType: editTransaction.machineType || '',
+        date: formattedDate,
+        durationHours: editTransaction.durationHours !== undefined ? String(editTransaction.durationHours) : '',
+        acresCovered: editTransaction.acresCovered !== undefined ? String(editTransaction.acresCovered) : '',
+        feeCharged: editTransaction.feeCharged !== undefined ? String(editTransaction.feeCharged) : '',
+        paymentStatus: editTransaction.paymentStatus || 'paid',
+        villageId: editTransaction.villageId || ''
+      });
+      setErrors({});
+    } else {
+      resetForm();
+    }
+  }, [editTransaction, isOpen]);
 
   const handleEquipmentChange = (e) => {
     const selectedId = e.target.value;

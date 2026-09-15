@@ -68,6 +68,70 @@ export const transactionService = {
   },
 
   /**
+   * Update an existing rental transaction
+   * @param {string} id - transaction ID
+   * @param {object} payload - updated transaction fields
+   */
+  async updateTransaction(id, payload) {
+    if (!payload.farmerName || !payload.machineId || payload.durationHours === undefined || payload.feeCharged === undefined) {
+      throw new Error('Validation error: farmerName, machineId, durationHours and feeCharged are required.');
+    }
+
+    const transactionData = {
+      villageId: payload.villageId || "64f1a23b89efc1234567890a",
+      farmerName: payload.farmerName.trim(),
+      machineId: payload.machineId.trim(),
+      machineType: payload.machineType || "Machinery",
+      date: payload.date || new Date().toISOString(),
+      durationHours: Number(payload.durationHours),
+      acresCovered: Number(payload.acresCovered || 0),
+      feeCharged: Number(payload.feeCharged),
+      paymentStatus: payload.paymentStatus || "paid",
+      offlineId: payload.offlineId
+    };
+
+    try {
+      const res = await request(`/api/vle/me/transactions/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(transactionData)
+      });
+      return res;
+    } catch (err) {
+      if (err.status === 0 || err.status === 404 || err.status === 405 || err.status === 501) {
+        // Fallback to local store
+        const store = getStoreData();
+        const index = store.transactions.findIndex(t => t._id === id || t.offlineId === id);
+        if (index !== -1) {
+          const oldTxn = store.transactions[index];
+          const diffEarnings = transactionData.feeCharged - (Number(oldTxn.feeCharged) || 0);
+          const diffHours = transactionData.durationHours - (Number(oldTxn.durationHours) || 0);
+
+          store.transactions[index] = {
+            ...oldTxn,
+            ...transactionData,
+            updatedAt: new Date().toISOString()
+          };
+
+          // Adjust weekly stats if applicable
+          const currentWeek = store.weeklyEarnings[store.weeklyEarnings.length - 1];
+          if (currentWeek) {
+            currentWeek.earnings = Math.max(0, currentWeek.earnings + diffEarnings);
+            currentWeek.hours = Math.max(0, currentWeek.hours + diffHours);
+          }
+
+          saveStoreData(store);
+          return {
+            success: true,
+            message: 'Rental transaction updated successfully',
+            data: store.transactions[index]
+          };
+        }
+      }
+      throw err;
+    }
+  },
+
+  /**
    * Get transaction history with pagination
    * @param {number} page
    * @param {number} limit

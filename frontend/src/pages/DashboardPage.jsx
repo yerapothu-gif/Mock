@@ -68,7 +68,7 @@ export default function DashboardPage({ onNavigate }) {
         {/* Greeting */}
         <div style={{ marginBottom: 4 }}>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.25 }}>
-            {getGreeting()}, {vleFirstName} 👋
+            {getGreeting()}, {vleFirstName}
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 4 }}>Here's your activity overview for today.</p>
         </div>

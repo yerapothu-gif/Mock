@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, Cpu, FileText, TrendingUp, Headphones, User, LogOut, Leaf, X, Menu } from 'lucide-react';
+import { LayoutDashboard, Cpu, FileText, Headphones, User, LogOut, Leaf, X, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useOffline } from '../../context/OfflineContext';
 import { useToast } from '../../context/ToastContext';
@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'equipment', label: 'My Equipment', icon: Cpu },
   { id: 'transactions', label: 'Rentals', icon: FileText },
-  { id: 'earnings', label: 'Earnings', icon: TrendingUp },
   { id: 'support', label: 'Support', icon: Headphones },
   { id: 'profile', label: 'Profile', icon: User },
 ];
