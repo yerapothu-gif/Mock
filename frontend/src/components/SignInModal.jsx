@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function SignInModal({ isOpen, onClose }) {
+export default function SignInModal({ isOpen, onClose, onEnterAdmin, initialRole = 'volunteer' }) {
   const { login, register } = useAuth();
   const [mode, setMode] = useState('signin'); // 'signin' | 'register'
-  const [selectedRole, setSelectedRole] = useState('volunteer');
+  const [selectedRole, setSelectedRole] = useState(initialRole);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
@@ -26,8 +26,16 @@ export default function SignInModal({ isOpen, onClose }) {
     setFormError('');
     setIsSubmitting(true);
     try {
-      await login(phone.trim(), password);
+      const loggedInUser = await login(phone.trim(), password);
       setSubmitted(true);
+      if (loggedInUser?.role === 'admin' && onEnterAdmin) {
+        // Let the success screen show briefly before handing off to the admin console
+        setTimeout(() => {
+          resetState();
+          onClose();
+          onEnterAdmin();
+        }, 900);
+      }
     } catch (err) {
       setFormError(err?.message || 'Sign in failed. Check your phone number and password.');
     } finally {
@@ -206,8 +214,12 @@ export default function SignInModal({ isOpen, onClose }) {
 
               <button
                 onClick={() => {
+                  const role = selectedRole;
                   resetState();
                   onClose();
+                  if (role === 'admin' && onEnterAdmin) {
+                    onEnterAdmin();
+                  }
                 }}
                 className="btn btn-primary"
                 style={{ marginTop: '24px' }}

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
 /* ==========================================================================
    REACHING ROOTS FOUNDATION — DESIGN SYSTEM
    Aesthetics & Color Palette: strictly from reachingroots.org
@@ -277,8 +279,6 @@ img {
    container as a sibling of the whole app, outside .app-shell, so those
    rules stay global.
    ========================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* App Shell Layout + Portal Design Tokens */
 .app-shell {

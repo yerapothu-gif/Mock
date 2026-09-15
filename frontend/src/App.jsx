@@ -16,13 +16,14 @@ import ImpactStoriesSlider from './components/ImpactStoriesSlider';
 import WorkGallerySection from './components/WorkGallerySection';
 import Footer from './components/Footer';
 import SignInModal from './components/SignInModal';
+import AdminDashboard from './components/admin/AdminDashboard';
 import './index.css';
 
-function LandingPage({ onOpenSignIn }) {
+function LandingPage({ onOpenSignIn, onNavigateAdmin }) {
   return (
     <div id="top" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Navigation Bar: Logo, About, Work, Sign In */}
-      <Navbar onOpenSignIn={onOpenSignIn} />
+      {/* Navigation Bar: Logo, About, Work, Admin Portal, Sign In */}
+      <Navbar onOpenSignIn={onOpenSignIn} onNavigateAdmin={onNavigateAdmin} />
 
       {/* Main Landing Flow */}
       <main style={{ flex: 1 }}>
@@ -43,7 +44,7 @@ function LandingPage({ onOpenSignIn }) {
       </main>
 
       {/* Global Rich Footer */}
-      <Footer onOpenSignIn={onOpenSignIn} />
+      <Footer onOpenSignIn={onOpenSignIn} onNavigateAdmin={onNavigateAdmin} />
     </div>
   );
 }
@@ -72,6 +73,17 @@ function VLEApp() {
 function AppShell() {
   const { isLoading, isAuthenticated, isVle } = useAuth();
   const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isAdminView, setIsAdminView] = useState(false);
+
+  const handleEnterAdmin = () => {
+    setIsAdminView(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleExitToLanding = () => {
+    setIsAdminView(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (isLoading) {
     return (
@@ -89,17 +101,25 @@ function AppShell() {
     );
   }
 
+  if (isAdminView) {
+    return <AdminDashboard onExitToLanding={handleExitToLanding} />;
+  }
+
   // Signed-in VLEs go straight to their field-operations portal.
-  // Everyone else (anonymous visitors, or signed-in Volunteers/Admins —
-  // whose dedicated consoles aren't built yet) sees the public site.
+  // Everyone else (anonymous visitors, or signed-in Volunteers —
+  // whose dedicated console isn't built yet) sees the public site.
   if (isAuthenticated && isVle) {
     return <VLEApp />;
   }
 
   return (
     <>
-      <LandingPage onOpenSignIn={() => setIsSignInOpen(true)} />
-      <SignInModal isOpen={isSignInOpen} onClose={() => setIsSignInOpen(false)} />
+      <LandingPage onOpenSignIn={() => setIsSignInOpen(true)} onNavigateAdmin={handleEnterAdmin} />
+      <SignInModal
+        isOpen={isSignInOpen}
+        onClose={() => setIsSignInOpen(false)}
+        onEnterAdmin={handleEnterAdmin}
+      />
     </>
   );
 }
