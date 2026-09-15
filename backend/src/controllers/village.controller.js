@@ -3,6 +3,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Village } from "../models/village.model.js";
+import { Farmer } from "../models/farmer.model.js";
+import { NeedsAssessment } from "../models/needsAssessment.model.js";
 
 const createVillage = asyncHandler(async (req, res) => {
     const {
@@ -161,15 +163,25 @@ const getVillageById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid village id");
     }
 
-    const village = await Village.findById(id);
+    const [village, farmers, assessments] = await Promise.all([
+        Village.findById(id),
+        Farmer.find({ villageId: id }).sort({ createdAt: -1 }),
+        NeedsAssessment.find({ villageId: id }).sort({ createdAt: -1 }),
+    ]);
 
     if (!village) {
         throw new ApiError(404, "Village not found");
     }
 
+    const villageData = {
+        ...village.toObject(),
+        farmers,
+        assessments,
+    };
+
     return res
         .status(200)
-        .json(new ApiResponse(200, village, "Village fetched successfully"));
+        .json(new ApiResponse(200, villageData, "Village fetched successfully"));
 });
 
 const updateVillage = asyncHandler(async (req, res) => {

@@ -10,7 +10,7 @@ const router = Router({ mergeParams: true });
 
 router
     .route("/:villageId/needs-assessment")
-    .post(verifyJWT, requireRole("volunteer"), submitAssessment)
+    .post(verifyJWT, requireRole("volunteer", "admin"), submitAssessment)
     .get(verifyJWT, getAssessmentsForVillage);
 
 export default router;

@@ -90,9 +90,11 @@ export const getMyContactRequests = asyncHandler(async (req, res) => {
  * GET /api/support/requests
  */
 export const getAllContactRequests = asyncHandler(async (req, res) => {
-    const { status, category } = req.query;
+    const { status, category, vleId } = req.query;
+    const targetVleId = req.params.id || vleId;
 
     const filter = {};
+    if (targetVleId) filter.vleId = targetVleId;
     if (status) filter.status = status;
     if (category) filter.category = category;
 

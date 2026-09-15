@@ -69,6 +69,10 @@ const addFarmer = asyncHandler(async (req, res) => {
         offlineId,
     });
 
+    await Village.findByIdAndUpdate(villageId, {
+        $inc: { farmerCount: 1 },
+    });
+
     return res
         .status(201)
         .json(new ApiResponse(201, farmer, "Farmer added successfully"));
