@@ -7,8 +7,10 @@ import ImpactStoriesSlider from './components/ImpactStoriesSlider';
 import WorkGallerySection from './components/WorkGallerySection';
 import Footer from './components/Footer';
 import SignInModal from './components/SignInModal';
+import AdminDashboard from './components/admin/AdminDashboard';
 
 export default function App() {
+  const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'admin'
   const [isSignInOpen, setIsSignInOpen] = useState(false);
 
   const handleOpenSignIn = () => {
@@ -19,10 +21,27 @@ export default function App() {
     setIsSignInOpen(false);
   };
 
+  const handleEnterAdmin = () => {
+    setCurrentView('admin');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleExitToLanding = () => {
+    setCurrentView('landing');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  if (currentView === 'admin') {
+    return <AdminDashboard onExitToLanding={handleExitToLanding} />;
+  }
+
   return (
     <div id="top" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Navigation Bar: Logo, About, Work, Sign In */}
-      <Navbar onOpenSignIn={handleOpenSignIn} />
+      {/* Navigation Bar: Logo, About, Work, Admin Portal, Sign In */}
+      <Navbar
+        onOpenSignIn={handleOpenSignIn}
+        onNavigateAdmin={handleEnterAdmin}
+      />
 
       {/* Main Landing Flow */}
       <main style={{ flex: 1 }}>
@@ -43,10 +62,17 @@ export default function App() {
       </main>
 
       {/* Global Rich Footer */}
-      <Footer onOpenSignIn={handleOpenSignIn} />
+      <Footer
+        onOpenSignIn={handleOpenSignIn}
+        onNavigateAdmin={handleEnterAdmin}
+      />
 
       {/* Role Sign In Modal */}
-      <SignInModal isOpen={isSignInOpen} onClose={handleCloseSignIn} />
+      <SignInModal
+        isOpen={isSignInOpen}
+        onClose={handleCloseSignIn}
+        onEnterAdmin={handleEnterAdmin}
+      />
     </div>
   );
 }

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 
-export default function SignInModal({ isOpen, onClose }) {
+export default function SignInModal({ isOpen, onClose, onEnterAdmin, initialRole = 'admin' }) {
   const [mode, setMode] = useState('signin'); // 'signin' | 'farmer-register'
-  const [selectedRole, setSelectedRole] = useState('volunteer');
+  const [selectedRole, setSelectedRole] = useState(initialRole);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   
   // Farmer Registration Fields
   const [farmerName, setFarmerName] = useState('');
@@ -19,8 +21,42 @@ export default function SignInModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
+  const handleAutoFillAdmin = () => {
+    setSelectedRole('admin');
+    setPhone('admin@reachingroots.org');
+    setPassword('admin');
+    setAuthError('');
+  };
+
   const handleSignIn = (e) => {
     e.preventDefault();
+    setAuthError('');
+
+    if (selectedRole === 'admin') {
+      const cleanPhone = phone.trim().toLowerCase();
+      const cleanPass = password.trim();
+
+      // Check mock credentials: accepts admin email or mobile and valid password
+      const isMockValid = 
+        (cleanPhone === 'admin@reachingroots.org' || cleanPhone === '+91 98765 43210' || cleanPhone === 'admin' || cleanPhone === '9876543210') &&
+        (cleanPass === 'admin' || cleanPass === 'roots@2026' || cleanPass === 'admin123');
+
+      if (!isMockValid && cleanPass !== 'admin') {
+        setAuthError('Invalid admin credentials. Use the mock credentials provided below.');
+        return;
+      }
+
+      setIsAuthenticating(true);
+      setTimeout(() => {
+        setIsAuthenticating(false);
+        onClose();
+        if (onEnterAdmin) {
+          onEnterAdmin();
+        }
+      }, 500);
+      return;
+    }
+
     setSubmitted(true);
   };
 
@@ -187,8 +223,12 @@ export default function SignInModal({ isOpen, onClose }) {
 
               <button
                 onClick={() => {
+                  const role = selectedRole;
                   resetState();
                   onClose();
+                  if (role === 'admin' && onEnterAdmin) {
+                    onEnterAdmin();
+                  }
                 }}
                 className="btn btn-primary"
                 style={{ marginTop: '24px' }}
@@ -314,32 +354,91 @@ export default function SignInModal({ isOpen, onClose }) {
                   />
                 </div>
 
-                <div
-                  style={{
-                    padding: '10px 14px',
-                    backgroundColor: 'var(--brand-green-subtle)',
-                    borderRadius: '2px',
-                    fontSize: '0.82rem',
-                    color: 'var(--brand-green-dark)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <span>💡</span>
-                  <span>Demo Mode: Enter any credentials to launch the {selectedRole.toUpperCase()} console.</span>
-                </div>
+                {authError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: '#FEE2E2',
+                      borderLeft: '3px solid #EF4444',
+                      borderRadius: '2px',
+                      color: '#991B1B',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⚠️ {authError}
+                  </div>
+                )}
+
+                {selectedRole === 'admin' ? (
+                  <div
+                    style={{
+                      padding: '14px 16px',
+                      backgroundColor: 'var(--brand-bg)',
+                      border: '1px solid var(--brand-border)',
+                      borderLeft: '4px solid var(--brand-orange)',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--brand-orange)', letterSpacing: '0.05em' }}>
+                        🔑 Mock Admin Staff Credentials
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleAutoFillAdmin}
+                        style={{
+                          background: 'var(--brand-orange)',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '3px',
+                          padding: '4px 8px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ⚡ Auto-Fill
+                      </button>
+                    </div>
+
+                    <div style={{ fontSize: '0.82rem', color: 'var(--brand-charcoal)', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '4px 12px' }}>
+                      <strong>Username:</strong>
+                      <code>admin@reachingroots.org</code>
+                      <strong>Password:</strong>
+                      <code>admin</code>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: 'var(--brand-green-subtle)',
+                      borderRadius: '2px',
+                      fontSize: '0.82rem',
+                      color: 'var(--brand-green-dark)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span>💡</span>
+                    <span>Demo Mode: Enter any credentials to launch the {selectedRole.toUpperCase()} console.</span>
+                  </div>
+                )}
 
                 <button
                   type="submit"
+                  disabled={isAuthenticating}
                   className="btn btn-primary"
                   style={{
                     width: '100%',
                     marginTop: '6px',
                     padding: '14px',
+                    opacity: isAuthenticating ? 0.7 : 1,
                   }}
                 >
-                  <span>SIGN IN AS {selectedRole.toUpperCase()}</span>
+                  <span>{isAuthenticating ? 'AUTHENTICATING STAFF...' : `SIGN IN AS ${selectedRole.toUpperCase()}`}</span>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M14 7.3466L13.4268 6.61513L8.7769 0.693149L7.20269 2.15609L10.3915 6.21861L0.235849 6.21861L0.235849 8.47461L10.3915 8.47461L7.20269 12.5371L8.7769 14L13.4268 8.07803L14 7.3466Z"
