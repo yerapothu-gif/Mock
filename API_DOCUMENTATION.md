@@ -143,6 +143,8 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
 #### 1. Add Farmer under a Village
 * **`POST /api/villages/:villageId/farmers`**
 * **Access**: `volunteer`, `admin`
+* **Predefined Education Dropdown Options**:
+  `"No Formal Education"`, `"Primary (1-5th)"`, `"Middle (6-8th)"`, `"10th Pass"`, `"12th Pass"`, `"Diploma / ITI"`, `"Graduate"`, `"Postgraduate"`, `"Other"`
 * **Request Body**:
   ```json
   {
@@ -152,10 +154,17 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
     "landholdingType": "small",
     "crops": ["Wheat", "Soybean"],
     "isPotentialVLE": true,
+    "education": "10th Pass",
+    "sourcesOfIncome": ["Farming", "Dairy"],
     "notes": "Progressive farmer with tractor driving experience",
     "offlineId": "uuid-farmer-456"
   }
   ```
+* **Offline Flow**:
+  1. Volunteer records farmer details via the form dropdown offline (saved in Dexie.js with `syncStatus: "pending"`).
+  2. Upon network reconnect, record is synced to backend (`POST /api/villages/:villageId/farmers` or `/api/sync/batch`).
+  3. Data is persisted in the `Farmer` collection.
+  4. Admins query `GET /api/villages/:villageId/candidates` to view candidates with their standardized qualifications for VLE onboarding.
 
 #### 2. List Farmers in Village
 * **`GET /api/villages/:villageId/farmers`**
@@ -164,7 +173,7 @@ All models reside in `backend/src/models/` and are registered with MongoDB Atlas
 #### 3. Identify Potential VLE Candidates in Village
 * **`GET /api/villages/:villageId/candidates`**
 * **Access**: `admin`
-* **Query Logic**: Retrieves farmers where `isPotentialVLE: true`.
+* **Query Logic**: Retrieves farmers where `isPotentialVLE: true`, returning their educational qualifications, landholding, and income sources to support data-driven VLE selection.
 
 ---
 

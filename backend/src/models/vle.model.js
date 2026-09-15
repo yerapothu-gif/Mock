@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { EDUCATION_QUALIFICATIONS } from "./farmer.model.js";
 
 const assignedEquipmentSchema = new Schema(
     {
@@ -69,8 +70,8 @@ const vleSchema = new Schema(
         education: {
             qualification: {
                 type: String,
-                trim: true, // e.g., "10th Pass", "12th Pass", "Graduate", "Diploma / ITI", "Basic"
-                default: "Not Specified",
+                enum: EDUCATION_QUALIFICATIONS,
+                default: "10th Pass",
             },
             institution: {
                 type: String,

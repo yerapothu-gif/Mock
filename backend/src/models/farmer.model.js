@@ -1,5 +1,17 @@
 import mongoose, { Schema } from "mongoose";
 
+export const EDUCATION_QUALIFICATIONS = [
+    "No Formal Education",
+    "Primary (1-5th)",
+    "Middle (6-8th)",
+    "10th Pass",
+    "12th Pass",
+    "Diploma / ITI",
+    "Graduate",
+    "Postgraduate",
+    "Other",
+];
+
 const farmerSchema = new Schema(
     {
         villageId: {
@@ -45,11 +57,12 @@ const farmerSchema = new Schema(
             default: false,
             index: true,
         },
-        // Educational background for VLE candidacy evaluation (per problem doc)
+        // Educational background with predefined options for VLE candidacy evaluation
         education: {
             type: String,
-            trim: true, // e.g., "10th Pass", "12th Pass", "Graduate", "Diploma / ITI", "Literate"
-            default: "Not Specified",
+            enum: EDUCATION_QUALIFICATIONS,
+            default: "No Formal Education",
+            index: true,
         },
         sourcesOfIncome: [
             {
