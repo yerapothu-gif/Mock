@@ -19,6 +19,20 @@ import SignInModal from './components/SignInModal';
 import AdminDashboard from './components/admin/AdminDashboard';
 import './index.css';
 
+import { VolunteerAuthProvider } from './context/VolunteerAuthContext';
+import { VolunteerOfflineProvider } from './context/VolunteerOfflineContext';
+import { VolunteerLayout } from './components/layout/VolunteerLayout';
+
+import { VolunteerDashboardPage } from './pages/VolunteerDashboardPage';
+import { VillagesPage } from './pages/VillagesPage';
+import { FarmersPage } from './pages/FarmersPage';
+import { NeedsAssessmentPage } from './pages/NeedsAssessmentPage';
+import { CandidatesPage } from './pages/CandidatesPage';
+import { OfflineSyncPage } from './pages/OfflineSyncPage';
+import { VolunteerProfilePage } from './pages/VolunteerProfilePage';
+
+import './App.css';
+
 function LandingPage({ onOpenSignIn, onNavigateAdmin }) {
   return (
     <div id="top" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -70,8 +84,39 @@ function VLEApp() {
   );
 }
 
+function VolunteerApp() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  const renderActivePage = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <VolunteerDashboardPage onNavigate={setActiveTab} />;
+      case 'villages':
+        return <VillagesPage />;
+      case 'farmers':
+        return <FarmersPage />;
+      case 'assessments':
+        return <NeedsAssessmentPage />;
+      case 'candidates':
+        return <CandidatesPage />;
+      case 'sync':
+        return <OfflineSyncPage />;
+      case 'profile':
+        return <VolunteerProfilePage />;
+      default:
+        return <VolunteerDashboardPage onNavigate={setActiveTab} />;
+    }
+  };
+
+  return (
+    <VolunteerLayout activeTab={activeTab} onNavigate={setActiveTab}>
+      {renderActivePage()}
+    </VolunteerLayout>
+  );
+}
+
 function AppShell() {
-  const { isLoading, isAuthenticated, isVle } = useAuth();
+  const { isLoading, isAuthenticated, isVle, isVolunteer } = useAuth();
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
 
@@ -106,10 +151,21 @@ function AppShell() {
   }
 
   // Signed-in VLEs go straight to their field-operations portal.
-  // Everyone else (anonymous visitors, or signed-in Volunteers —
-  // whose dedicated console isn't built yet) sees the public site.
   if (isAuthenticated && isVle) {
     return <VLEApp />;
+  }
+
+  // Signed-in Volunteers go to their own field-data-collection portal,
+  // which owns its own auth/offline context (auto-loads a simulated
+  // profile rather than depending on the shared AuthProvider session).
+  if (isAuthenticated && isVolunteer) {
+    return (
+      <VolunteerAuthProvider>
+        <VolunteerOfflineProvider>
+          <VolunteerApp />
+        </VolunteerOfflineProvider>
+      </VolunteerAuthProvider>
+    );
   }
 
   return (

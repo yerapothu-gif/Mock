@@ -110,6 +110,7 @@ export function AuthProvider({ children }) {
         authError,
         isAuthenticated: !!user,
         isVle: user?.role === 'vle',
+        isVolunteer: user?.role === 'volunteer',
         login,
         register,
         logout,

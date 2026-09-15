@@ -1,15 +1,20 @@
-export function StatCard({ label, value, subtext, icon: Icon, color = 'green' }) {
+export function StatCard({ label, value, subtext, icon: Icon, color = 'green', onClick }) {
   const colorMap = {
     green: { bg: '#d8f3dc', color: '#1b4332' },
     amber: { bg: '#fef3c7', color: '#b45309' },
     blue: { bg: '#e0f2fe', color: '#0369a1' },
-    sage: { bg: '#edf1ea', color: '#2d6a4f' }
+    sage: { bg: '#edf1ea', color: '#2d6a4f' },
+    terracotta: { bg: 'var(--terracotta-bg)', color: 'var(--terracotta)' }
   };
 
   const currentTheme = colorMap[color] || colorMap.green;
 
   return (
-    <div className="stat-card">
+    <div
+      className="stat-card"
+      onClick={onClick}
+      style={{ cursor: onClick ? 'pointer' : 'default' }}
+    >
       <div className="stat-content">
         <span className="stat-label">{label}</span>
         <span className="stat-value">{value}</span>

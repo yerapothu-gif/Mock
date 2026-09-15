@@ -55,11 +55,81 @@
   --transition-slow: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Reaching Roots — Field Volunteer Portal Design System */
+:root {
+  /* Brand Green Palette */
+  --primary-900: #0d2818;
+  --primary-800: #1b4332;
+  --primary-700: #2d6a4f;
+  --primary-600: #40916c;
+  --primary-500: #52b788;
+  --primary-400: #74c69d;
+  --primary-200: #b7e4c7;
+  --primary-100: #d8f3dc;
+  --primary-50: #f0fdf4;
+
+  /* Earth & Warm Neutrals */
+  --earth-bg: #f7f6f2;
+  --earth-card: #ffffff;
+  --earth-warm: #f2efe9;
+  --earth-border: #e3ded5;
+  --earth-dark: #2c2523;
+  --text-primary: #1f2421;
+  --text-secondary: #525a55;
+  --text-muted: #737e77;
+
+  /* Accents & Signals */
+  --terracotta: #c85a32;
+  --terracotta-bg: #fdf2ee;
+  --amber: #d97706;
+  --amber-bg: #fef3c7;
+  --amber-border: #fde68a;
+  --amber-text: #92400e;
+  --blue: #2563eb;
+  --blue-bg: #eff6ff;
+  --blue-text: #1e40af;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --danger-text: #991b1b;
+  --success: #15803d;
+  --success-bg: #f0fdf4;
+  --success-border: #bbf7d0;
+  --success-text: #166534;
+
+  /* UI Tokens */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-drawer: -4px 0 24px rgba(0, 0, 0, 0.15);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --sidebar-width: 250px;
+  --header-height: 64px;
+  --bottom-nav-height: 62px;
+}
+
 /* Reset & Box Sizing */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Global spin utility — shared by LoadingState's Loader2 icon and
+   StatusBadge's "syncing" RefreshCw icon. */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 html {
@@ -548,6 +618,19 @@ img {
   gap: 24px;
 }
 
+/* Portal root sizing. Note: the Volunteer branch's global html/body/
+   h1-h6/p/a resets are intentionally NOT merged in here — they'd
+   collide with (and override, per CSS source order) the public
+   landing page's own html/body/heading/link styling above. Portal
+   pages don't need them: text styling is handled by the
+   .app-shell-scoped rules below plus per-page inline styles. */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 /* Buttons (Portal-specific — scoped so they don't collide with the
    landing page's own .btn/.btn-primary/.btn-outline above) */
 .app-shell .btn {
@@ -563,6 +646,11 @@ img {
   cursor: pointer;
   transition: all 0.15s ease;
   text-decoration: none;
+}
+
+.app-shell .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .app-shell .btn-primary {
@@ -616,6 +704,20 @@ img {
 .app-shell .btn-lg {
   padding: 12px 22px;
   font-size: 0.95rem;
+}
+
+.app-shell .btn-danger {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: var(--danger-border);
+}
+
+.app-shell .btn-danger:hover:not(:disabled) {
+  background-color: #fee2e2;
+}
+
+.app-shell .btn-block {
+  width: 100%;
 }
 
 /* Badges */
@@ -880,8 +982,149 @@ img {
   white-space: nowrap;
 }
 
+/* Form Controls */
+.form-group {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1.5px solid var(--earth-border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(64, 145, 108, 0.15);
+}
+
+.form-input.error,
+.form-select.error,
+.form-textarea.error {
+  border-color: var(--danger);
+  background-color: #fffafa;
+}
+
+.field-error {
+  font-size: 0.78rem;
+  color: var(--danger);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.form-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .form-grid-2, .form-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Card & Layouts */
+.card {
+  background: var(--earth-card);
+  border: 1px solid var(--earth-border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--earth-warm);
+}
+
+.page-container {
+  padding: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 16px 14px;
+    gap: 18px;
+  }
+}
+
+/* Tables */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.custom-table th {
+  padding: 12px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  background-color: var(--earth-warm);
+  border-bottom: 1px solid var(--earth-border);
+  white-space: nowrap;
+}
+
 .app-shell .custom-table td {
   padding: 14px 16px;
+  font-size: 0.88rem;
   border-bottom: 1px solid var(--earth-border-subtle);
   color: var(--text-primary);
   vertical-align: middle;
@@ -889,6 +1132,32 @@ img {
 
 .app-shell .custom-table tr:hover td {
   background: rgba(244, 246, 240, 0.5);
+}
+
+/* Status Badges — stage/sync sub-states not covered by the badge-*
+   groups above (used by StatusBadge's type="stage"/type="sync" modes) */
+.app-shell .badge-identified {
+  background-color: var(--amber-bg);
+  color: var(--amber-text);
+  border: 1px solid var(--amber-border);
+}
+
+.app-shell .badge-assessed {
+  background-color: var(--blue-bg);
+  color: var(--blue-text);
+  border: 1px solid #bfdbfe;
+}
+
+.app-shell .badge-vle-active {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.app-shell .badge-syncing {
+  background-color: var(--blue-bg);
+  color: var(--blue-text);
+  border: 1px solid #bfdbfe;
 }
 
 /* Modal */
@@ -902,6 +1171,7 @@ img {
   justify-content: center;
   z-index: 100;
   padding: 16px;
+  overflow-y: auto;
 }
 
 .app-shell .modal-content {
@@ -1128,5 +1398,22 @@ img {
 
   .app-shell .form-grid-2 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Bottom-sheet style modal on small screens */
+@media (max-width: 640px) {
+  .app-shell .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .app-shell .modal-content {
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .app-shell .modal-body {
+    padding: 18px;
   }
 }

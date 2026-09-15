@@ -9,23 +9,44 @@ const ERROR_MESSAGES = {
   0: { title: 'Connection Error', hint: 'Could not reach the server. Check your network or try again.' },
 };
 
-export function ErrorState({ error, onRetry }) {
-  const status = error?.status;
-  const info = ERROR_MESSAGES[status] || { title: 'Error', hint: error?.message || 'An unexpected error occurred.' };
+// Accepts either an `error` object (VLE pages, which surface HTTP status
+// codes from the API client) or a `message` (Volunteer pages, which pass a
+// plain string or a generic Error). Either prop name works so callers on
+// both sides can use whichever reads naturally for them.
+export function ErrorState({ error, message, onRetry }) {
+  const err = error ?? message;
+  const status = err?.status;
+  const info = ERROR_MESSAGES[status] || {
+    title: 'Unable to Load Data',
+    hint: typeof err === 'string' ? err : err?.message || 'Check your network connection or try again.'
+  };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: 14, textAlign: 'center' }}>
-      <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--danger-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '56px 24px',
+        gap: 14,
+        textAlign: 'center',
+        background: 'var(--danger-bg)',
+        border: '1px solid var(--danger-border)',
+        borderRadius: 'var(--radius-lg)'
+      }}
+    >
+      <div style={{ width: 60, height: 60, borderRadius: '50%', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)' }}>
         <AlertTriangle size={28} />
       </div>
       <div>
-        <p style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{info.title}</p>
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', maxWidth: 380 }}>{info.hint}</p>
-        {status && <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 6 }}>HTTP {status}</p>}
+        <p style={{ fontWeight: 700, color: 'var(--danger-text)', marginBottom: 6 }}>{info.title}</p>
+        <p style={{ fontSize: '0.85rem', color: 'var(--danger-text)', maxWidth: 420 }}>{info.hint}</p>
+        {status ? <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 6 }}>HTTP {status}</p> : null}
       </div>
       {onRetry && (
-        <button className="btn btn-secondary btn-sm" onClick={onRetry} id="error-retry-btn">
-          <RefreshCw size={14} /> Retry
+        <button className="btn btn-secondary btn-sm" onClick={onRetry} id="error-retry-btn" style={{ marginTop: 4 }}>
+          <RefreshCw size={14} /> Try Again
         </button>
       )}
     </div>
