@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export default function SignInModal({ isOpen, onClose }) {
+  const { login, register } = useAuth();
   const [mode, setMode] = useState('signin'); // 'signin' | 'register'
   const [selectedRole, setSelectedRole] = useState('volunteer');
   const [phone, setPhone] = useState('');
@@ -14,27 +16,48 @@ export default function SignInModal({ isOpen, onClose }) {
 
   const [submitted, setSubmitted] = useState(false);
   const [registeredAccount, setRegisteredAccount] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setFormError('');
+    setIsSubmitting(true);
+    try {
+      await login(phone.trim(), password);
+      setSubmitted(true);
+    } catch (err) {
+      setFormError(err?.message || 'Sign in failed. Check your phone number and password.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    setRegisteredAccount({
-      name: regName,
-      phone: regPhone,
-      role: registerRole,
-    });
-    setSubmitted(true);
+    setFormError('');
+    setIsSubmitting(true);
+    try {
+      await register(regName.trim(), regPhone.trim(), regPassword, registerRole);
+      setRegisteredAccount({
+        name: regName,
+        phone: regPhone,
+        role: registerRole,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      setFormError(err?.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetState = () => {
     setSubmitted(false);
     setRegisteredAccount(null);
+    setFormError('');
     setMode('signin');
   };
 
@@ -310,32 +333,34 @@ export default function SignInModal({ isOpen, onClose }) {
                   />
                 </div>
 
-                <div
-                  style={{
-                    padding: '10px 14px',
-                    backgroundColor: 'var(--brand-green-subtle)',
-                    borderRadius: '2px',
-                    fontSize: '0.82rem',
-                    color: 'var(--brand-green-dark)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <span>💡</span>
-                  <span>Demo Mode: Enter any credentials to launch the {selectedRole.toUpperCase()} console.</span>
-                </div>
+                {formError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: '#fef2f2',
+                      borderRadius: '2px',
+                      fontSize: '0.82rem',
+                      color: '#991b1b',
+                      border: '1px solid #fecaca',
+                    }}
+                  >
+                    {formError}
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   className="btn btn-primary"
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     marginTop: '6px',
                     padding: '14px',
+                    opacity: isSubmitting ? 0.7 : 1,
+                    cursor: isSubmitting ? 'wait' : 'pointer',
                   }}
                 >
-                  <span>SIGN IN AS {selectedRole.toUpperCase()}</span>
+                  <span>{isSubmitting ? 'SIGNING IN…' : `SIGN IN AS ${selectedRole.toUpperCase()}`}</span>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M14 7.3466L13.4268 6.61513L8.7769 0.693149L7.20269 2.15609L10.3915 6.21861L0.235849 6.21861L0.235849 8.47461L10.3915 8.47461L7.20269 12.5371L8.7769 14L13.4268 8.07803L14 7.3466Z"
@@ -537,17 +562,35 @@ export default function SignInModal({ isOpen, onClose }) {
                   />
                 </div>
 
+                {formError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      backgroundColor: '#fef2f2',
+                      borderRadius: '2px',
+                      fontSize: '0.82rem',
+                      color: '#991b1b',
+                      border: '1px solid #fecaca',
+                    }}
+                  >
+                    {formError}
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   className="btn btn-primary"
+                  disabled={isSubmitting}
                   style={{
                     width: '100%',
                     marginTop: '8px',
                     padding: '14px',
                     backgroundColor: 'var(--brand-green)',
+                    opacity: isSubmitting ? 0.7 : 1,
+                    cursor: isSubmitting ? 'wait' : 'pointer',
                   }}
                 >
-                  <span>CREATE {registerRole.toUpperCase()} ACCOUNT</span>
+                  <span>{isSubmitting ? 'CREATING ACCOUNT…' : `CREATE ${registerRole.toUpperCase()} ACCOUNT`}</span>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M14 7.3466L13.4268 6.61513L8.7769 0.693149L7.20269 2.15609L10.3915 6.21861L0.235849 6.21861L0.235849 8.47461L10.3915 8.47461L7.20269 12.5371L8.7769 14L13.4268 8.07803L14 7.3466Z"
