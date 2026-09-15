@@ -1,111 +1,259 @@
+/* ==========================================================================
+   REACHING ROOTS FOUNDATION — DESIGN SYSTEM
+   Aesthetics & Color Palette: strictly from reachingroots.org
+   Layout Architecture: inspired by igsas.com.tr
+   ========================================================================== */
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* Brand Colors from reachingroots.org */
+  --brand-green: #04724d;
+  --brand-green-dark: #024b33;
+  --brand-green-light: #069c6a;
+  --brand-green-subtle: #eef7f3;
+  
+  --brand-orange: #fc6f0f;
+  --brand-orange-hover: #e55e05;
+  --brand-orange-subtle: #fff4ed;
+  
+  --brand-slate: #2d4a76;
+  --brand-slate-light: #446d9c;
+  
+  --brand-charcoal: #1c1c1c;
+  --brand-charcoal-muted: rgba(28, 28, 28, 0.68);
+  --brand-charcoal-subtle: rgba(28, 28, 28, 0.08);
+  
+  --brand-bg: #fcfaf8;
+  --brand-surface: #ffffff;
+  --brand-surface-card: #f8f6f2;
+  
+  --brand-border: #e8e4dc;
+  --brand-border-dark: rgba(255, 255, 255, 0.18);
+  
+  /* Typography */
+  --font-primary: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'DM Sans', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  
+  /* Elevations & Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.12);
+  --shadow-card: 0 12px 36px rgba(4, 114, 77, 0.08);
+  
+  /* Geometry: Crisp & Editorial (0px to 4px corners like igsas, pill buttons) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 9999px;
+  
+  /* Transitions */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* Reset & Box Sizing */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+html {
+  scroll-behavior: smooth;
+  font-family: var(--font-body);
+  background-color: var(--brand-bg);
+  color: var(--brand-charcoal);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  line-height: 1.6;
+  background-color: var(--brand-bg);
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* Typography Hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--brand-charcoal);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
 p {
-  margin: 0;
+  color: var(--brand-charcoal-muted);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Container Structure */
+.container {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 18px;
+  }
+}
+
+/* ==========================================================================
+   BUTTON PRIMITIVES (Igsas / Reaching Roots Style)
+   ========================================================================== */
+
+.btn {
   display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 14px 28px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.btn i, .btn svg {
+  transition: transform var(--transition-fast);
+}
+
+.btn:hover i, .btn:hover svg {
+  transform: translateX(4px);
+}
+
+/* Primary Button (Deep Reaching Roots Green) */
+.btn-primary {
+  background-color: var(--brand-green);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: var(--brand-green-dark);
+  box-shadow: 0 8px 24px rgba(4, 114, 77, 0.28);
+}
+
+/* Secondary Button (Outline) */
+.btn-outline {
+  border: 1.5px solid var(--brand-charcoal);
+  color: var(--brand-charcoal);
+  background: transparent;
+}
+
+.btn-outline:hover {
+  background-color: var(--brand-charcoal);
+  color: #ffffff;
+}
+
+/* Light Outline Button (for Dark Backgrounds) */
+.btn-outline-light {
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  color: #ffffff;
+  background: transparent;
+}
+
+.btn-outline-light:hover {
+  background-color: #ffffff;
+  color: var(--brand-charcoal);
+  border-color: #ffffff;
+}
+
+/* Accent Orange Button */
+.btn-accent {
+  background-color: var(--brand-orange);
+  color: #ffffff;
+}
+
+.btn-accent:hover {
+  background-color: var(--brand-orange-hover);
+  box-shadow: 0 8px 24px rgba(252, 111, 15, 0.35);
+}
+
+/* Connect / Sign In Pill Button (like Igsas Top Right) */
+.btn-connect {
+  background: var(--brand-green);
+  color: #ffffff;
+  padding: 10px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+}
+
+.btn-connect:hover {
+  background: var(--brand-green-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(4, 114, 77, 0.25);
+}
+
+/* ==========================================================================
+   KEYFRAME ANIMATIONS
+   ========================================================================== */
+
+@keyframes pulseArrow {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(9px);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.8s var(--ease-spring) forwards;
+}
+
+/* Pattern Overlay for Stats Section (Igsas Signature Texture) */
+.pattern-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
