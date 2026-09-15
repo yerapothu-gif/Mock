@@ -5,8 +5,8 @@ import { User } from "../models/user.model.js";
 
 export const verifyJWT = asyncHandler(async(req, _, next) => {
     try {
-        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
-        
+        const token = req.header("Authorization")?.replace("Bearer ", "") || req.cookies?.accessToken
+
         // console.log(token);
         if (!token) {
             throw new ApiError(401, "Unauthorized request")
@@ -47,7 +47,7 @@ export const requireRole = (role) => requireRoles(role);
 // Optional JWT verification: attaches user if valid token present, otherwise passes through
 export const optionalVerifyJWT = asyncHandler(async (req, _, next) => {
     try {
-        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "");
+        const token = req.header("Authorization")?.replace("Bearer ", "") || req.cookies?.accessToken;
         if (!token) return next();
 
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || "default_access_secret");
