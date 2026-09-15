@@ -1,5 +1,5 @@
 
-export default function Footer({ onOpenSignIn }) {
+export default function Footer({ onOpenSignIn, onNavigateAdmin }) {
   return (
     <footer
       style={{
@@ -158,7 +158,7 @@ export default function Footer({ onOpenSignIn }) {
               </li>
               <li>
                 <button
-                  onClick={onOpenSignIn}
+                  onClick={() => onOpenSignIn('admin')}
                   style={{
                     color: 'rgba(255, 255, 255, 0.75)',
                     fontSize: '0.9rem',
