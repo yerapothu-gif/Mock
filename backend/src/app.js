@@ -42,7 +42,7 @@ app.use("/api/sync", syncRouter);
 app.use("/api/reports", reportRouter);
 app.use("/api/support", supportRouter);
 
-// Error Handling (must be last)
+// Centralized Error Handler (uses error.middleware.js from HEAD)
 import { errorHandler } from "./middlewares/error.middleware.js";
 app.use(errorHandler);
 

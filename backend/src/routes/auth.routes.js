@@ -2,18 +2,24 @@ import { Router } from "express";
 import {
     registerUser,
     loginUser,
-    logoutUser,
     getCurrentUser,
+    logoutUser,
+    refreshAccessToken,
 } from "../controllers/auth.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import {
+    verifyJWT,
+    optionalVerifyJWT,
+} from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.route("/register").post(registerUser);
+// Public / Bootstrap routes
+router.route("/register").post(optionalVerifyJWT, registerUser);
 router.route("/login").post(loginUser);
+router.route("/refresh-token").post(refreshAccessToken);
 
-// Secured routes
-router.route("/logout").post(verifyJWT, logoutUser);
+// Protected routes (Requires valid JWT)
 router.route("/me").get(verifyJWT, getCurrentUser);
+router.route("/logout").post(verifyJWT, logoutUser);
 
 export default router;
